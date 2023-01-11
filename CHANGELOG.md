@@ -1,5 +1,17 @@
 # nuxt-custom-fetch
 
+## 1.0.5
+
+### Patch Changes
+
+- nuxt-custom-fetch\docs: 更新/nuxt-error-and-cache\fix: 修改最低支持版本
+
+## 1.0.4
+
+### Patch Changes
+
+- docs 更新
+
 ## 1.0.3
 
 ### Patch Changes
