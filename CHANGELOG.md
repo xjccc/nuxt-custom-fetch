@@ -1,0 +1,37 @@
+# nuxt-custom-fetch
+
+## 1.0.3
+
+### Patch Changes
+
+- 修改 onResponse 不需要返回值
+
+## 1.0.2
+
+### Patch Changes
+
+- 增加 HTTP 拦截器,config 拦截器调用
+
+## 1.0.1
+
+### Patch Changes
+
+- 增加 AsyncDataOptions<DataT>
+
+## 1.0.0
+
+### Major Changes
+
+- v1.0.0
+
+### Patch Changes
+
+- 自定义封装 useAsyncData
+- 去除 useHandler 参数
+
+## 0.0.2-alpha.0
+
+### Patch Changes
+
+- 自定义封装 useAsyncData
+- 去除 useHandler 参数
