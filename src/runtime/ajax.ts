@@ -1,4 +1,4 @@
-import type { FetchRequest, FetchOptions, FetchError, FetchResponse } from 'ofetch'
+import type { FetchOptions } from 'ofetch'
 import { hash } from 'ohash'
 import { createError } from 'h3'
 import type { _AsyncData, AsyncDataOptions } from 'nuxt/dist/app/composables/asyncData'
@@ -88,7 +88,7 @@ export class HTTP {
     return { ...params }
   }
 
-  get<DataT, ErrorT = Error | null> (
+  http<DataT, ErrorT = Error | null> (
     url: string,
     config: FetchOptions = {},
     options?: AsyncDataOptions<DataT>
@@ -97,7 +97,6 @@ export class HTTP {
     const query = this.baseConfig(config)
     return ajax<DataT, ErrorT>(url, key, {
       baseURL: this.params.baseURL as string,
-      method: 'GET',
       ...config,
       query,
       interceptors: this.interceptors,
@@ -105,20 +104,19 @@ export class HTTP {
     }, options)
   }
 
+  get<DataT, ErrorT = Error | null> (
+    url: string,
+    config: FetchOptions = {},
+    options?: AsyncDataOptions<DataT>
+  ) {
+    return this.http<DataT, ErrorT>(url, { ...config, method: 'GET' }, options)
+  }
+
   post<DataT, ErrorT = Error | null> (
     url: string,
     config: FetchOptions = {},
     options?: AsyncDataOptions<DataT>
   ) {
-    const key = getKey(url, config, this.params.extraParams)
-    const query = this.baseConfig(config)
-    return ajax<DataT, ErrorT>(url, key, {
-      baseURL: this.params.baseURL as string,
-      method: 'POST',
-      ...config,
-      query,
-      interceptors: this.interceptors,
-      offline: this.params.offline
-    }, options)
+    return this.http<DataT, ErrorT>(url, { ...config, method: 'POST' }, options)
   }
 }

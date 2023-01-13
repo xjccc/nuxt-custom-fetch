@@ -62,6 +62,14 @@ onRequest?: ({ request, options }: {
   }) => void
 ```
 
+## 实例方法
+
+### http
+
+### get
+
+### post
+
 ```js
 import { hash } from 'ohash'
 const key = hash(JSON.stringify(restConfig) + url)

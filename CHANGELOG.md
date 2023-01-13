@@ -1,5 +1,27 @@
 # nuxt-custom-fetch
 
+## 1.0.6
+
+### Patch Changes
+
+- refactor: get\post
+- 修改 get\post 返回值
+- 修改 docs\修改 get\post
+
+## 1.0.6-alpha.1
+
+### Patch Changes
+
+- 修改 get\post 返回值
+- Updated dependencies
+  - nuxt-custom-fetch@1.0.6-alpha.1
+
+## 1.0.6-alpha.0
+
+### Patch Changes
+
+- refactor: get\post
+
 ## 1.0.5
 
 ### Patch Changes
