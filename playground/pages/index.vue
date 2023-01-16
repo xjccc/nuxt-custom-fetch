@@ -5,8 +5,8 @@
   </div>
 </template>
 <script setup lang="ts">
+import { ref, onMounted, nextTick } from 'vue'
 import { ArticleInfo, getArticleListData } from '../api/ajax'
-
 // const { data, error, pending } = await getInfo<{ip: string}>({
 //   sign: 123,
 //   sign_time: 'aaa'
@@ -19,6 +19,7 @@ const getApi = async () => {
     SerId: 64,
     PageSize: 6
   })
+  console.log(data.value)
 
   if (!data.value) { return }
   list.value = data.value

@@ -1,4 +1,5 @@
 import type { FetchOptions } from 'ofetch'
+import { HTTP } from '#imports'
 
 const ajax = new HTTP({
   baseURL: ''
@@ -26,7 +27,9 @@ export interface ArticleInfo {
 }
 
 // 获取经销商列表
-export const getArticleListData = (params: FetchOptions) => ajax.get<ArticleInfo>('/Article/GetSubCategorySeriesInfo', {
+export const getArticleListData = (params: FetchOptions['params']) => ajax.get<ArticleInfo>('/Article/GetSubCategorySeriesInfo', {
   query: params,
   baseURL: 'https://cms-api-test.360che.com'
+}, {
+  pick: ['totalpage']
 })
