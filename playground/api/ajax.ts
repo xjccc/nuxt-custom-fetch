@@ -28,6 +28,7 @@ export interface ArticleInfo {
 
 // 获取经销商列表
 export const getArticleListData = (params: FetchOptions['params']) => ajax.get<ArticleInfo>('/Article/GetSubCategorySeriesInfo', {
+  key: '',
   query: params,
   baseURL: 'https://cms-api-test.360che.com'
 }, {

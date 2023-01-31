@@ -6,7 +6,6 @@ interface ResponseMap {
   arrayBuffer: ArrayBuffer;
   stream: ReadableStream<Uint8Array>;
 }
-declare type ResponseType = keyof ResponseMap | 'json';
 
 export interface OnRequestType {
   request: FetchRequest
@@ -30,47 +29,21 @@ export interface OnResponseErrorType {
   options: FetchOptions
   response: FetchResponse<any>
 }
+export type FetchMethod = 'options' | 'GET' | 'POST' | 'get' | 'HEAD' | 'PATCH' | 'PUT' | 'DELETE' | 'CONNECT' | 'OPTIONS' | 'TRACE' | 'post' | 'head' | 'patch' | 'put' | 'delete' | 'connect' | 'trace' | undefined
 
-export type HTTPConfig = {
+export interface HTTPConfig extends Omit<FetchOptions, 'method'> {
   baseURL?: string
   extraParams?: string[]
-  paramsHandler?: (params: FetchOptions['params']) => FetchOptions & HTTPConfig
+  paramsHandler?: (params: FetchOptions['params']) => HTTPConfig
   offline?: () => void
-  onRequest?: ({ request, options }: OnRequestType) => void
-  onRequestError?: ({
-    request,
-    options,
-    error
-  }: OnRequestErrorType) => void
-  onResponse?: ({
-    request,
-    response,
-    options
-  }: OnResponseType) => Promise<void> | void
-  onResponseError?: ({
-    request,
-    response,
-    options
-  }: OnResponseErrorType) => void
+  method?: FetchMethod
 }
 
 export interface Interceptors {
-  onRequest?: ({ request, options }: OnRequestType) => void,
-  onRequestError?: ({
-    request,
-    options,
-    error
-  }: OnRequestErrorType) => void,
-  onResponse?: ({
-    request,
-    response,
-    options
-  }: OnResponseType) => Promise<void> | void,
-  onResponseError?: ({
-    request,
-    response,
-    options
-  }: OnResponseErrorType) => void
+  onRequest?: FetchOptions['onRequest']
+  onRequestError?: FetchOptions['onRequestError']
+  onResponse?: FetchOptions['onResponse']
+  onResponseError?: FetchOptions['onResponseError']
 }
 
-export type AjaxConfig = FetchOptions & { extraParams?: string[], offline?: () => void, interceptors: Interceptors }
+export type AjaxConfig = FetchOptions & { key?: string, extraParams?: string[], offline?: () => void, interceptors: Interceptors }

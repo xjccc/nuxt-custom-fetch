@@ -1,5 +1,11 @@
 # nuxt-custom-fetch
 
+## 1.0.7
+
+### Patch Changes
+
+- 添加 key
+
 ## 1.0.6
 
 ### Patch Changes

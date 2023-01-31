@@ -1,8 +1,7 @@
-import type { FetchOptions } from 'ofetch'
 import { hash } from 'ohash'
 import { createError } from 'h3'
 import type { _AsyncData, AsyncDataOptions } from 'nuxt/dist/app/composables/asyncData'
-import { HTTPConfig, Interceptors, OnRequestErrorType, OnRequestType, OnResponseErrorType, OnResponseType, AjaxConfig } from './type'
+import { HTTPConfig, Interceptors, OnRequestErrorType, OnRequestType, OnResponseErrorType, OnResponseType, AjaxConfig, FetchMethod } from './type'
 import { useAsyncData } from '#imports'
 
 export const ajax = <DataT, ErrorT = Error | null>(
@@ -17,7 +16,6 @@ export const ajax = <DataT, ErrorT = Error | null>(
 
   const { onRequest, onRequestError, onResponse, onResponseError, interceptors, ...restAjaxConfig } = config
   const defaultOptions = {
-    key,
     onRequest (ctx: OnRequestType) {
       [interceptors.onRequest, onRequest].map(fn => fn && fn(ctx))
     },
@@ -47,13 +45,14 @@ export const ajax = <DataT, ErrorT = Error | null>(
 
   return useAsyncData<DataT, ErrorT>(key, () => $fetch(url, {
     ...defaultOptions,
-    ...restAjaxConfig
+    ...restAjaxConfig,
+    method: restAjaxConfig.method as FetchMethod
   }), options) as Promise<_AsyncData<DataT, ErrorT>>
 }
 
-function getKey (url: string, config: FetchOptions, extraParams: string[] = []) {
+function getKey (url: string, config: HTTPConfig, extraParams: string[] = []) {
   const params = (config.query ? config.query : config.params) || {}
-  const restConfig: {[key: string]: unknown} = {}
+  const restConfig: { [key: string]: unknown } = {}
   for (const key in params) {
     if (Object.prototype.hasOwnProperty.call(params, key) && !extraParams.includes(key)) {
       restConfig[key] = params[key]
@@ -62,7 +61,6 @@ function getKey (url: string, config: FetchOptions, extraParams: string[] = []) 
   const key = hash(JSON.stringify(restConfig) + url)
   return key
 }
-
 export class HTTP {
   params: HTTPConfig = {}
   interceptors: Interceptors = {}
@@ -72,14 +70,14 @@ export class HTTP {
       ...config
     }
     this.interceptors = {
-      onRequest: config.onRequest || function () {},
-      onRequestError: config.onRequestError || function () {},
-      onResponse: config.onResponse || function () {},
-      onResponseError: config.onResponseError || function () {}
+      onRequest: config.onRequest || function () { },
+      onRequestError: config.onRequestError || function () { },
+      onResponse: config.onResponse || function () { },
+      onResponseError: config.onResponseError || function () { }
     }
   }
 
-  private baseConfig (config: FetchOptions): FetchOptions {
+  private baseConfig (config: HTTPConfig): HTTPConfig {
     const { paramsHandler } = this.params
     const params = (config.query ? config.query : config.params) || {}
     if (paramsHandler && typeof paramsHandler === 'function') {
@@ -90,10 +88,10 @@ export class HTTP {
 
   http<DataT, ErrorT = Error | null> (
     url: string,
-    config: FetchOptions = {},
+    config: HTTPConfig & { key?: string } = {},
     options?: AsyncDataOptions<DataT>
   ) {
-    const key = getKey(url, config, this.params.extraParams)
+    const key = config.key ? config.key : getKey(url, config, this.params.extraParams)
     const query = this.baseConfig(config)
     return ajax<DataT, ErrorT>(url, key, {
       baseURL: this.params.baseURL as string,
@@ -106,7 +104,7 @@ export class HTTP {
 
   get<DataT, ErrorT = Error | null> (
     url: string,
-    config: FetchOptions = {},
+    config: HTTPConfig & { key?: string } = {},
     options?: AsyncDataOptions<DataT>
   ) {
     return this.http<DataT, ErrorT>(url, { ...config, method: 'GET' }, options)
@@ -114,7 +112,7 @@ export class HTTP {
 
   post<DataT, ErrorT = Error | null> (
     url: string,
-    config: FetchOptions = {},
+    config: HTTPConfig & { key?: string } = {},
     options?: AsyncDataOptions<DataT>
   ) {
     return this.http<DataT, ErrorT>(url, { ...config, method: 'POST' }, options)
