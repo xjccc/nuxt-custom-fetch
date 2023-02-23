@@ -30,7 +30,7 @@ export interface ArticleInfo {
 export const getArticleListData = (params: FetchOptions['params']) => ajax.get<ArticleInfo>('/Article/GetSubCategorySeriesInfo', {
   key: '',
   query: params,
-  baseURL: 'https://cms-api-test.360che.com'
+  baseURL: '/proxy/cms'
 }, {
   pick: ['totalpage']
 })
