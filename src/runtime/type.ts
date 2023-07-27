@@ -1,11 +1,5 @@
 
 import type { FetchRequest, FetchOptions, FetchError, FetchResponse } from 'ofetch'
-interface ResponseMap {
-  blob: Blob;
-  text: string;
-  arrayBuffer: ArrayBuffer;
-  stream: ReadableStream<Uint8Array>;
-}
 
 export interface OnRequestType {
   request: FetchRequest
@@ -34,6 +28,7 @@ export type FetchMethod = 'options' | 'GET' | 'POST' | 'get' | 'HEAD' | 'PATCH' 
 export interface HTTPConfig extends Omit<FetchOptions, 'method'> {
   baseURL?: string
   extraParams?: string[]
+  useParamsHandler?: boolean
   paramsHandler?: (params: FetchOptions['params']) => HTTPConfig
   offline?: () => void
   method?: FetchMethod

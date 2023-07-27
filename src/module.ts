@@ -5,8 +5,8 @@ export interface ModuleOptions {}
 
 export default defineNuxtModule<ModuleOptions>({
   meta: {
-    name: 'nuxt-http-fetch',
-    configKey: 'httpFetch'
+    name: 'nuxt-custom-fetch',
+    configKey: 'customFetch'
   },
   defaults: {},
   setup (options, nuxt) {
@@ -15,7 +15,7 @@ export default defineNuxtModule<ModuleOptions>({
     nuxt.options.build.transpile.push(runtimeDir)
     addImports({
       from: resolve(runtimeDir, 'ajax'),
-      name: 'HTTP'
+      name: 'CustomFetch'
     })
   }
 })

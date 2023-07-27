@@ -4,7 +4,7 @@
 
 ## HTTPOptions
 
-实例化全局 HTTP
+实例化全局 CustomFetch
 
 ```
 baseURL?: string
@@ -85,7 +85,10 @@ const key = hash(JSON.stringify(restConfig) + url)
 
 ```
 baseURL?: string;
+key?: string;
 body?: RequestInit["body"] | Record<string, any>;
+useParamsHandler: HTTPConfig['paramsHandler'];
+paramsHandler: HTTPConfig['paramsHandler'];
 params?: SearchParameters;
 query?: SearchParameters;
 parseResponse?: (responseText: string) => any;
@@ -121,8 +124,9 @@ immediate?: boolean;
 ```ts
 // ajax.ts文件
 import type { FetchOptions } from 'ofetch'
-const ajax = new HTTP({
+const ajax = new CustomFetch({
   baseURL: '',
+  // 全局处理query\params的方法
   paramsHandler: (params = {}) => {
     params.aa = 111
     return params

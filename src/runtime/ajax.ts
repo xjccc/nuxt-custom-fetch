@@ -61,27 +61,41 @@ function getKey (url: string, config: HTTPConfig, extraParams: string[] = []) {
   const key = hash(JSON.stringify(restConfig) + url)
   return key
 }
-export class HTTP {
+
+const Noop = () => {}
+export class CustomFetch {
+  baseURL
   params: HTTPConfig = {}
+  baseParamsHandler: HTTPConfig['paramsHandler']
   interceptors: Interceptors = {}
+  offline = Noop
 
   constructor (config: HTTPConfig = { baseURL: '' }) {
     this.params = {
       ...config
     }
+    this.baseURL = config.baseURL
+
+    if (config.paramsHandler) {
+      this.baseParamsHandler = config.paramsHandler
+    }
+    this.offline = config?.offline || Noop
+
     this.interceptors = {
-      onRequest: config.onRequest || function () { },
-      onRequestError: config.onRequestError || function () { },
-      onResponse: config.onResponse || function () { },
-      onResponseError: config.onResponseError || function () { }
+      onRequest: config.onRequest || Noop,
+      onRequestError: config.onRequestError || Noop,
+      onResponse: config.onResponse || Noop,
+      onResponseError: config.onResponseError || Noop
     }
   }
 
   private baseConfig (config: HTTPConfig): HTTPConfig {
-    const { paramsHandler } = this.params
+    const { useParamsHandler = true, paramsHandler } = config
+    const handler = paramsHandler || this.baseParamsHandler
     const params = (config.query ? config.query : config.params) || {}
-    if (paramsHandler && typeof paramsHandler === 'function') {
-      return paramsHandler({ ...params })
+
+    if (useParamsHandler && handler && typeof handler === 'function') {
+      return handler({ ...params })
     }
     return { ...params }
   }
@@ -92,13 +106,15 @@ export class HTTP {
     options?: AsyncDataOptions<DataT>
   ) {
     const key = config.key ? config.key : getKey(url, config, this.params.extraParams)
+    const baseURL = config?.baseURL || this.baseURL
     const query = this.baseConfig(config)
+    const offline = config?.offline || this.offline
     return ajax<DataT, ErrorT>(url, key, {
-      baseURL: this.params.baseURL as string,
+      baseURL,
       ...config,
       query,
       interceptors: this.interceptors,
-      offline: this.params.offline
+      offline
     }, options)
   }
 
