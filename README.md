@@ -6,11 +6,13 @@
 
 实例化全局 CustomFetch
 
-```
-baseURL?: string
-paramsHandler?: (params: FetchOptions['params']) => FetchOptions & HTTPConfig
-extraParams?: string[]
-offline?: () => void
+```ts
+{
+  baseURL?: string
+  paramsHandler?: (params: FetchOptions['params']) => FetchOptions & HTTPConfig
+  extraParams?: string[]
+  offline?: () => void
+}
 ```
 
 ### baseURL
@@ -28,8 +30,9 @@ offline?: () => void
 
 ### 请求-响应拦截
 
-```
-onRequest?: ({ request, options }: {
+```ts
+{
+  onRequest?: ({ request, options }: {
     request: FetchRequest
     options: FetchOptions
   }) => void
@@ -60,6 +63,7 @@ onRequest?: ({ request, options }: {
     options: FetchOptions
     response: FetchResponse<any>
   }) => void
+}
 ```
 
 ## 实例方法
@@ -83,45 +87,65 @@ const key = hash(JSON.stringify(restConfig) + url)
 
 ### fetchOptions
 
-```
-baseURL?: string;
-key?: string;
-body?: RequestInit["body"] | Record<string, any>;
-useParamsHandler: HTTPConfig['paramsHandler'];
-paramsHandler: HTTPConfig['paramsHandler'];
-params?: SearchParameters;
-query?: SearchParameters;
-parseResponse?: (responseText: string) => any;
-responseType?: R;
-response?: boolean;
-retry?: number | false;
-onRequest?(context: FetchContext): Promise<void> | void;
-onRequestError?(context: FetchContext & {
-    error: Error;
-}): Promise<void> | void;
-onResponse?(context: FetchContext & {
-    response: FetchResponse<R>;
-}): Promise<void> | void;
-onResponseError?(context: FetchContext & {
-    response: FetchResponse<R>;
-}): Promise<void> | void;
+```ts
+interface fetchOptions {
+  baseURL?: string
+  key?: string
+  body?: RequestInit['body'] | Record<string, any>
+  useParamsHandler: HTTPConfig['paramsHandler']
+  paramsHandler: HTTPConfig['paramsHandler']
+  params?: SearchParameters
+  query?: SearchParameters
+  parseResponse?: (responseText: string) => any
+  responseType?: R
+  response?: boolean
+  retry?: number | false
+  onRequest?(context: FetchContext): Promise<void> | void
+  onRequestError?(
+    context: FetchContext & {
+      error: Error
+    }
+  ): Promise<void> | void
+  onResponse?(
+    context: FetchContext & {
+      response: FetchResponse<R>
+    }
+  ): Promise<void> | void
+  onResponseError?(
+    context: FetchContext & {
+      response: FetchResponse<R>
+    }
+  ): Promise<void> | void
+}
 ```
 
-### AsyncDataOptions<DataT>
+### AsyncDataOptions
 
-```
-server?: boolean;
-lazy?: boolean;
-default?: () => DataT | Ref<DataT> | null;
-transform?: Transform;
-pick?: PickKeys;
-watch?: MultiWatchSources;
-immediate?: boolean;
+```ts
+// AsyncDataOptions<DataT>
+{
+  server?: boolean;
+  lazy?: boolean;
+  default?: () => DataT | Ref<DataT> | null;
+  transform?: Transform;
+  pick?: PickKeys;
+  watch?: MultiWatchSources;
+  immediate?: boolean;
+}
 ```
 
 ## 使用方式
 
+```bash
+pnpm add nuxt-custom-fetch
+```
+
 ```ts
+// nuxt.config.ts
+export default defineNuxtConfig({
+  modules: ['nuxt-custom-fetch']
+})
+
 // ajax.ts文件
 import type { FetchOptions } from 'ofetch'
 const ajax = new CustomFetch({
