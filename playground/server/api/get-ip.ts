@@ -1,3 +1,5 @@
+import { defineEventHandler } from 'h3'
+
 export default defineEventHandler((event) => {
   const { req } = event
   // console.log(req,'请求')

@@ -1,7 +1,7 @@
 import { hash } from 'ohash'
 import { createError } from 'h3'
 import type { _AsyncData, AsyncDataOptions } from 'nuxt/dist/app/composables/asyncData'
-import { HTTPConfig, Interceptors, OnRequestErrorType, OnRequestType, OnResponseErrorType, OnResponseType, AjaxConfig, FetchMethod } from './type'
+import type { HTTPConfig, Interceptors, OnRequestErrorType, OnRequestType, OnResponseErrorType, OnResponseType, AjaxConfig, FetchMethod } from './type'
 import { useAsyncData } from '#imports'
 
 export const ajax = <DataT, ErrorT = Error | null>(

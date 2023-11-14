@@ -1,5 +1,17 @@
 # nuxt-custom-fetch
 
+## 1.1.1
+
+### Patch Changes
+
+- update
+
+## 1.1.0
+
+### Minor Changes
+
+- update nuxt@3.8
+
 ## 1.0.8
 
 ### Patch Changes

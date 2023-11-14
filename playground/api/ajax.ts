@@ -1,7 +1,7 @@
 import type { FetchOptions } from 'ofetch'
-import { HTTP } from '#imports'
+import { CustomFetch } from '#imports'
 
-const ajax = new HTTP({
+const ajax = new CustomFetch({
   baseURL: ''
 })
 
