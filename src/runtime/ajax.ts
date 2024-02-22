@@ -12,8 +12,11 @@ import type {
 } from "./type";
 import type {
   AsyncData,
-  AsyncDataOptions
-} from "nuxt/dist/app/composables/asyncData";
+  AsyncDataOptions,
+  NuxtError,
+  KeysOf,
+  PickFrom
+} from "nuxt/app";
 import { useAsyncData } from "#imports";
 
 export const ajax = <DataT, ErrorT = Error | null>(
@@ -21,7 +24,11 @@ export const ajax = <DataT, ErrorT = Error | null>(
   key: string,
   config: AjaxConfig,
   options?: AsyncDataOptions<DataT>,
-): AsyncData<DataT, ErrorT> => {
+): AsyncData<
+  PickFrom<DataT, KeysOf<DataT>> | null,
+  | (ErrorT extends Error | NuxtError<unknown> ? ErrorT : NuxtError<ErrorT>)
+  | null
+> => {
   if (process.client && navigator && !navigator.onLine) {
     config.offline && config.offline();
   }
