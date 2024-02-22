@@ -9,13 +9,13 @@ import type {
   OnResponseType,
   AjaxConfig,
   FetchMethod,
+  KeysOf,
+  PickFrom
 } from "./type";
 import type {
   AsyncData,
   AsyncDataOptions,
-  NuxtError,
-  KeysOf,
-  PickFrom
+  NuxtError
 } from "nuxt/app";
 import { useAsyncData } from "#imports";
 
