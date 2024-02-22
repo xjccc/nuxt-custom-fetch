@@ -68,11 +68,7 @@
 
 ## 实例方法
 
-### http
-
-### get
-
-### post
+`http|get|post`
 
 ```js
 import { hash } from 'ohash'
@@ -119,20 +115,9 @@ interface fetchOptions {
 }
 ```
 
-### AsyncDataOptions
+### Type
 
-```ts
-// AsyncDataOptions<DataT>
-{
-  server?: boolean;
-  lazy?: boolean;
-  default?: () => DataT | Ref<DataT> | null;
-  transform?: Transform;
-  pick?: PickKeys;
-  watch?: MultiWatchSources;
-  immediate?: boolean;
-}
-```
+[type](https://nuxt.com/docs/api/composables/use-async-data#type)
 
 ## 使用方式
 

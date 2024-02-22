@@ -1,5 +1,11 @@
 # nuxt-custom-fetch
 
+## 1.1.2
+
+### Patch Changes
+
+- update/types
+
 ## 1.1.1
 
 ### Patch Changes

@@ -6,7 +6,7 @@
 </template>
 <script setup lang="ts">
 import { ref, onMounted, nextTick } from 'vue'
-import { ArticleInfo, getArticleListData } from '../api/ajax'
+import { type ArticleInfo, getArticleListData } from '../api/ajax'
 // const { data, error, pending } = await getInfo<{ip: string}>({
 //   sign: 123,
 //   sign_time: 'aaa'
