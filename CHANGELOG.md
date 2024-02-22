@@ -1,5 +1,11 @@
 # nuxt-custom-fetch
 
+## 1.1.3
+
+### Patch Changes
+
+- generate hash key
+
 ## 1.1.2
 
 ### Patch Changes

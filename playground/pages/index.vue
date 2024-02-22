@@ -19,7 +19,6 @@ const getApi = async () => {
     SerId: 64,
     PageSize: 6
   })
-  console.log(data.value)
 
   if (!data.value) { return }
   list.value = data.value

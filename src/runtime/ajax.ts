@@ -3,7 +3,8 @@ import { createError } from 'h3'
 import type {
   AsyncData,
   AsyncDataOptions,
-  NuxtError
+  NuxtError,
+  UseFetchOptions
 } from 'nuxt/app'
 import type {
   HTTPConfig,
@@ -17,7 +18,7 @@ import type {
   KeysOf,
   PickFrom
 } from './type'
-import { useAsyncData } from '#imports'
+import { toValue, useAsyncData, type MaybeRef } from '#imports'
 
 export const ajax = <DataT, ErrorT = Error | null>(
   url: string,
@@ -82,20 +83,22 @@ export const ajax = <DataT, ErrorT = Error | null>(
     options
   )
 }
+function generateOptionSegments (opts: HTTPConfig) {
+  const segments: Array<string | undefined | Record<string, string>> = [
+    toValue(opts.method as MaybeRef<string | undefined> | undefined)?.toUpperCase() || 'GET',
+    toValue(opts.baseURL)
+  ]
+  for (const _obj of [opts.params || opts.query]) {
+    const obj = toValue(_obj)
+    if (!obj) { continue }
 
-function getKey (url: string, config: HTTPConfig, extraParams: string[] = []) {
-  const params = (config.query ? config.query : config.params) || {}
-  const restConfig: { [key: string]: unknown } = {}
-  for (const key in params) {
-    if (
-      Object.prototype.hasOwnProperty.call(params, key) &&
-      !extraParams.includes(key)
-    ) {
-      restConfig[key] = params[key]
+    const unwrapped: Record<string, string> = {}
+    for (const [key, value] of Object.entries(obj)) {
+      unwrapped[toValue(key)] = toValue(value)
     }
+    segments.push(unwrapped)
   }
-  const key = hash(JSON.stringify(restConfig) + url)
-  return key
+  return segments
 }
 
 const Noop = () => {}
@@ -143,7 +146,7 @@ export class CustomFetch {
   ) {
     const key = config.key
       ? config.key
-      : getKey(url, config, this.params.extraParams)
+      : hash([...generateOptionSegments(config)])
     const baseURL = config?.baseURL || this.baseURL
     const query = this.baseConfig(config)
     const offline = config?.offline || this.offline

@@ -10,7 +10,6 @@
 {
   baseURL?: string
   paramsHandler?: (params: FetchOptions['params']) => FetchOptions & HTTPConfig
-  extraParams?: string[]
   offline?: () => void
 }
 ```
@@ -22,11 +21,6 @@
 ### paramsHandler
 
 处理 params 的自定义函数
-
-### extraParams
-
-排除在 params 中的 key（用于生成\$fetch 所需要的唯一 key）
-类型: string[]
 
 ### 请求-响应拦截
 

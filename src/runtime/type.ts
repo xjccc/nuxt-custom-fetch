@@ -1,4 +1,3 @@
-
 import type { FetchRequest, FetchOptions, FetchError, FetchResponse } from 'ofetch'
 
 export type PickFrom<T, K extends Array<string>> = T extends Array<any> ? T : T extends Record<string, any> ? keyof T extends K[number] ? T : K[number] extends never ? T : Pick<T, K[number]> : T;
@@ -30,7 +29,6 @@ export type FetchMethod = 'options' | 'GET' | 'POST' | 'get' | 'HEAD' | 'PATCH' 
 
 export interface HTTPConfig extends Omit<FetchOptions, 'method'> {
   baseURL?: string
-  extraParams?: string[]
   useParamsHandler?: boolean
   paramsHandler?: (params: FetchOptions['params']) => HTTPConfig
   offline?: () => void
