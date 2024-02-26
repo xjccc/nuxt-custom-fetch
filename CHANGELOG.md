@@ -1,5 +1,11 @@
 # nuxt-custom-fetch
 
+## 1.1.4
+
+### Patch Changes
+
+- generate with url
+
 ## 1.1.3
 
 ### Patch Changes

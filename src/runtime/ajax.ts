@@ -146,7 +146,7 @@ export class CustomFetch {
   ) {
     const key = config.key
       ? config.key
-      : hash([...generateOptionSegments(config)])
+      : hash([url, ...generateOptionSegments(config)])
     const baseURL = config?.baseURL || this.baseURL
     const query = this.baseConfig(config)
     const offline = config?.offline || this.offline
