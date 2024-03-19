@@ -2,7 +2,11 @@ import type { FetchOptions } from 'ofetch'
 import { CustomFetch } from '#imports'
 
 const ajax = new CustomFetch({
-  baseURL: ''
+  baseURL: '',
+  paramsHandler (params = {}) {
+    const obj = JSON.stringify(params)
+    return { a: obj }
+  }
 })
 
 interface ArticleList {

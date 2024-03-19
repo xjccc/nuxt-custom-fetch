@@ -3,8 +3,7 @@ import { createError } from 'h3'
 import type {
   AsyncData,
   AsyncDataOptions,
-  NuxtError,
-  UseFetchOptions
+  NuxtError
 } from 'nuxt/app'
 import type {
   HTTPConfig,
@@ -134,6 +133,8 @@ export class CustomFetch {
     const params = (config.query ? config.query : config.params) || {}
 
     if (useParamsHandler && handler && typeof handler === 'function') {
+      delete config.params
+      delete config.query
       return handler({ ...params })
     }
     return { ...params }
