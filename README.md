@@ -9,7 +9,7 @@
 ```ts
 {
   baseURL?: string
-  paramsHandler?: (params: FetchOptions['params']) => FetchOptions & HTTPConfig
+  paramsHandler?: (params: Record<any, string>) => Record<any, string>
   offline?: () => void
 }
 ```
@@ -136,7 +136,7 @@ const ajax = new CustomFetch({
   }
 })
 
-export const getInfo = (params: FetchOptions['params']) =>
+export const getInfo = (params: Record<any, string>) =>
   ajax.get<DataT>('/api/get-ip', { params }, options?: AsyncDataOptions<DataT>)
 ```
 

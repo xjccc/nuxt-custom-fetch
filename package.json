@@ -19,20 +19,20 @@
     "url": "https://github.com/xjccc/nuxt-custom-fetch.git"
   },
   "scripts": {
-    "prepack": "nuxt-module-build build",
+    "prepack": "nuxt-module-build",
     "dev": "nuxi dev playground",
     "dev:build": "nuxi build playground",
     "dev:prepare": "nuxt-module-build --stub && nuxi prepare playground"
   },
   "dependencies": {
-    "@nuxt/kit": "^3.10.2",
-    "typescript": "^5.3.3"
+    "@nuxt/kit": "^3.11.1",
+    "typescript": "^5.4.2"
   },
   "devDependencies": {
     "@nuxt/module-builder": "^0.5.5",
-    "@nuxt/schema": "^3.10.2",
+    "@nuxt/schema": "^3.11.1",
     "@nuxtjs/eslint-config-typescript": "^12.1.0",
-    "eslint": "^8.56.0",
-    "nuxt": "^3.10.2"
+    "eslint": "^8.57.0",
+    "nuxt": "^3.11.1"
   }
 }
