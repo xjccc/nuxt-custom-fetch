@@ -30,7 +30,7 @@ export type FetchMethod = 'options' | 'GET' | 'POST' | 'get' | 'HEAD' | 'PATCH' 
 export interface HTTPConfig extends Omit<FetchOptions, 'method'> {
   baseURL?: string
   useParamsHandler?: boolean
-  paramsHandler?: (params: Record<any, string>) => Record<any, string>
+  paramsHandler?: (params: Record<string, any>) => Record<string, any>
   offline?: () => void
   method?: FetchMethod
 }
