@@ -1,5 +1,11 @@
 # nuxt-custom-fetch
 
+## 1.1.6
+
+### Patch Changes
+
+- fix paramsHandler params type
+
 ## 1.1.5
 
 ### Patch Changes
