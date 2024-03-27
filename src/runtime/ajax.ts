@@ -1,5 +1,6 @@
 import { hash } from 'ohash'
 import { createError } from 'h3'
+import type { NitroFetchRequest } from 'nitropack'
 import type {
   AsyncData,
   AsyncDataOptions,
@@ -20,7 +21,7 @@ import type {
 import { toValue, useAsyncData, type MaybeRef } from '#imports'
 
 export const ajax = <DataT, ErrorT = Error | null>(
-  url: string,
+  url: NitroFetchRequest,
   key: string,
   config: AjaxConfig,
   options?: AsyncDataOptions<DataT>
@@ -70,11 +71,10 @@ export const ajax = <DataT, ErrorT = Error | null>(
       })
     }
   }
-
   return useAsyncData<DataT, ErrorT>(
     key,
     () =>
-      $fetch(url, {
+      $fetch(url as string, {
         ...defaultOptions,
         ...restAjaxConfig,
         method: restAjaxConfig.method as FetchMethod
@@ -141,7 +141,7 @@ export class CustomFetch {
   }
 
   http<DataT, ErrorT = Error | null> (
-    url: string,
+    url: NitroFetchRequest,
     config: HTTPConfig & { key?: string } = {},
     options?: AsyncDataOptions<DataT>
   ) {
@@ -166,7 +166,7 @@ export class CustomFetch {
   }
 
   get<DataT, ErrorT = Error | null> (
-    url: string,
+    url: NitroFetchRequest,
     config: HTTPConfig & { key?: string } = {},
     options?: AsyncDataOptions<DataT>
   ) {
@@ -174,7 +174,7 @@ export class CustomFetch {
   }
 
   post<DataT, ErrorT = Error | null> (
-    url: string,
+    url: NitroFetchRequest,
     config: HTTPConfig & { key?: string } = {},
     options?: AsyncDataOptions<DataT>
   ) {
