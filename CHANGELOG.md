@@ -1,5 +1,11 @@
 # nuxt-custom-fetch
 
+## 1.1.7
+
+### Patch Changes
+
+- change url type
+
 ## 1.1.6
 
 ### Patch Changes
