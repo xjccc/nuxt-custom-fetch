@@ -13,3 +13,13 @@ export const getList = (page: number) => {
     }
   })
 }
+export const getNum = (page: number) => {
+  return ajax.get<{
+    data: number[],
+    nums: number
+  }>('/get-num', {
+    params: {
+      page
+    }
+  })
+}

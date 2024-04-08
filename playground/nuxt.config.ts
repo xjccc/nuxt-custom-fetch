@@ -5,6 +5,7 @@ export default defineNuxtConfig({
   modules: [
     MyModule
   ],
+  ssr: false,
   vite: {
     server: {
       fs: {
