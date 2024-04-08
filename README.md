@@ -2,6 +2,19 @@
 
 简单封装 useAsyncData
 
+## 注意
+
+请求的使用形式，类似于之前的`ajax`，修改参数后，重新调用封装方法。
+
+1. 在 onMounted 中请求无效（version > 3.0.0）
+
+- 在下一个 nextTick 中执行，或者设置{server: false}，watch pending 变化
+
+2. 因为封装后，参数的`响应式丢失`，导致`watch`无法使用
+
+3. `refresh`和`execute`使用上也需要注意，参数不是响应式的，所以会一直是第一次请求的参数
+
+
 ## HTTPOptions
 
 实例化全局 CustomFetch
@@ -151,16 +164,6 @@ const { data, error, pending } = await getInfo({
 })
 console.log(data.value)
 ```
-
-## 注意
-
-1. 在 onMounted 中请求无效（version > 3.0.0）
-
-- 在下一个 nextTick 中执行，或者设置{server: false}，watch pending 变化
-
-2. 因为封装后，参数的`响应式丢失`，导致`watch`无法使用
-
-3. `refresh`和`execute`使用上也需要注意，参数不是响应式的，所以会一直是第一次请求的参数
 
 ## Development
 

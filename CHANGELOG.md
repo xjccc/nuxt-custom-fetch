@@ -1,5 +1,11 @@
 # nuxt-custom-fetch
 
+## 2.0.0
+
+### Major Changes
+
+- client fetch use $fetch
+
 ## 1.1.7
 
 ### Patch Changes
