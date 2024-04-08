@@ -2,6 +2,9 @@
   <div class="container">
     主页
     {{ list?.totalpage }}
+    <NuxtLink to="/test">
+      Test page
+    </NuxtLink>
   </div>
 </template>
 <script setup lang="ts">

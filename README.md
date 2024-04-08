@@ -9,7 +9,7 @@
 ```ts
 {
   baseURL?: string
-  paramsHandler?: (params: Record<string, any>) => Record<string, any>
+  handler?: (params: Record<string, any>) => Record<string, any>
   offline?: () => void
 }
 ```
@@ -18,9 +18,17 @@
 
 当前实例下的 baseURL
 
-### paramsHandler
+### handler
 
-处理 params 的自定义函数
+处理 query & params 的自定义函数
+
+```ts
+{
+  handler({...query, ...params}) {
+    return {}
+  }
+}
+```
 
 ### 请求-响应拦截
 
@@ -64,11 +72,6 @@
 
 `http|get|post`
 
-```js
-import { hash } from 'ohash'
-const key = hash(JSON.stringify(restConfig) + url)
-```
-
 ### offline
 
 客户端中，离线时调用(判断 navigator.onLine)
@@ -82,8 +85,8 @@ interface fetchOptions {
   baseURL?: string
   key?: string
   body?: RequestInit['body'] | Record<string, any>
-  useParamsHandler: HTTPConfig['paramsHandler']
-  paramsHandler: HTTPConfig['paramsHandler']
+  useHandler: HTTPConfig['useHandler']
+  handler: HTTPConfig['handler']
   params?: SearchParameters
   query?: SearchParameters
   parseResponse?: (responseText: string) => any
@@ -130,7 +133,7 @@ import type { FetchOptions } from 'ofetch'
 const ajax = new CustomFetch({
   baseURL: '',
   // 全局处理query\params的方法
-  paramsHandler: (params = {}) => {
+  handler: (params = {}) => {
     params.aa = 111
     return params
   }
@@ -151,9 +154,13 @@ console.log(data.value)
 
 ## 注意
 
-在 onMounted 中请求无效（version > 3.0.0）
+1. 在 onMounted 中请求无效（version > 3.0.0）
 
 - 在下一个 nextTick 中执行，或者设置{server: false}，watch pending 变化
+
+2. 因为封装后，参数的`响应式丢失`，导致`watch`无法使用
+
+3. `refresh`和`execute`使用上也需要注意，参数不是响应式的，所以会一直是第一次请求的参数
 
 ## Development
 

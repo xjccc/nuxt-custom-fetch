@@ -19,7 +19,7 @@
     "url": "https://github.com/xjccc/nuxt-custom-fetch.git"
   },
   "scripts": {
-    "prepack": "nuxt-module-build",
+    "prepack": "nuxt-module-build build",
     "dev": "nuxi dev playground",
     "dev:build": "nuxi build playground",
     "dev:prepare": "nuxt-module-build --stub && nuxi prepare playground"
