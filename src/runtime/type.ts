@@ -28,11 +28,11 @@ export interface OnResponseErrorType {
 export type FetchMethod = 'options' | 'GET' | 'POST' | 'get' | 'HEAD' | 'PATCH' | 'PUT' | 'DELETE' | 'CONNECT' | 'OPTIONS' | 'TRACE' | 'post' | 'head' | 'patch' | 'put' | 'delete' | 'connect' | 'trace' | undefined
 
 export interface HTTPConfig extends Omit<FetchOptions, 'method'> {
+  key?: string
   baseURL?: string
-  useParamsHandler?: boolean
-  paramsHandler?: (params: Record<string, any>) => Record<string, any>
+  useHandler?: boolean
+  handler?: (params: Record<string, any>) => Record<string, any>
   offline?: () => void
-  method?: FetchMethod
 }
 
 export interface Interceptors {
@@ -41,5 +41,3 @@ export interface Interceptors {
   onResponse?: FetchOptions['onResponse']
   onResponseError?: FetchOptions['onResponseError']
 }
-
-export type AjaxConfig = FetchOptions & { key?: string, extraParams?: string[], offline?: () => void, interceptors: Interceptors }
