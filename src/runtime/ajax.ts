@@ -198,10 +198,8 @@ export class CustomFetch {
         })
       return promise as any
     }
-    if (!config.key) {
-      return useAsyncData<DataT, ErrorT>(handler, options)
-    }
-    return useAsyncData<DataT, ErrorT>(config.key, handler, options)
+
+    return useAsyncData<DataT, ErrorT>(config.key || key, handler, options)
   }
 
   get<DataT, ErrorT = Error | null> (
