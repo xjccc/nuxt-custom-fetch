@@ -20,8 +20,10 @@
 import { ref, nextTick, onMounted, watch } from 'vue'
 import * as API from '../api'
 import { useAsyncData, useFetch } from '#imports'
+import { getArticleListData } from '~/api/ajax'
 const page = ref(1)
 const list = ref<number[]>([])
+const num = ref<number>()
 let _refresh = () => {}
 const getList = async () => {
   const { data, refresh, pending, error, status } = await API.getList(page.value)
@@ -39,7 +41,21 @@ const getList = async () => {
   console.log(data.value, pending.value, error.value, status.value, 'data =====>')
 }
 
+const getNum = async () => {
+  const { data, refresh, pending, error, status } = await API.getNum(page.value)
+  // const { data, refresh } = await useFetch('/api/get-list', {
+  //   params: {
+  //     page: page.value
+  //   }
+  // })
+  if (data.value) {
+    num.value = data.value.nums
+    console.log(data.value, 'nums =====>')
+  }
+}
+
 await getList()
+await getNum()
 
 onMounted(async () => {
   await nextTick()
@@ -56,6 +72,7 @@ const loadMore = () => {
   // _refresh()
   getList()
   getList()
+  getNum()
   // await nextTick
 }
 </script>
