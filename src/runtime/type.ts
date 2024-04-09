@@ -29,6 +29,7 @@ export type FetchMethod = 'options' | 'GET' | 'POST' | 'get' | 'HEAD' | 'PATCH' 
 
 export interface HTTPConfig extends Omit<FetchOptions, 'method'> {
   key?: string
+  immutableKey?: boolean
   baseURL?: string
   useHandler?: boolean
   handler?: (params: Record<string, any>) => Record<string, any>

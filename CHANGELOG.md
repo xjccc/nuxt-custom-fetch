@@ -1,5 +1,11 @@
 # nuxt-custom-fetch
 
+## 2.0.3
+
+### Patch Changes
+
+- feat immutableKey
+
 ## 2.0.2
 
 ### Patch Changes

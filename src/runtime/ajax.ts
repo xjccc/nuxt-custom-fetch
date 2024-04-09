@@ -50,6 +50,7 @@ const _cachedController = new Map<string, AbortController>()
 
 export class CustomFetch {
   baseURL
+  immutableKey = false
   params: HTTPConfig = {}
   baseHandler: HTTPConfig['handler']
   interceptors: Interceptors = {}
@@ -60,6 +61,7 @@ export class CustomFetch {
       ...config
     }
     this.baseURL = config.baseURL
+    this.immutableKey = config.immutableKey ?? false
 
     if (config.handler) {
       this.baseHandler = config.handler
@@ -134,7 +136,13 @@ export class CustomFetch {
         })
       }
     }
-    const key = hash(['custom|', url, ...generateOptionSegments(config)])
+
+    const hashValue: Array<string | undefined | Record<string, string>> = ['custom|', url as string]
+    if (!this.immutableKey) {
+      hashValue.push(...generateOptionSegments(config))
+    }
+
+    const key = hash(hashValue)
 
     const handler = () => {
       if (_cachedController.get(key)) {
@@ -150,6 +158,8 @@ export class CustomFetch {
     const nuxtApp = useNuxtApp()
     const controller = typeof AbortController !== 'undefined' ? new AbortController() : {} as AbortController
 
+    // const instance = getCurrentInstance()
+    // if (import.meta.client && !nuxtApp.isHydrating && (!instance || instance?.isMounted)) {
     if (import.meta.client && !nuxtApp.isHydrating) {
       const asyncData: {
         data: Ref<any>
