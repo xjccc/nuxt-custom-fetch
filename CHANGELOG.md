@@ -1,5 +1,11 @@
 # nuxt-custom-fetch
 
+## 2.0.4
+
+### Patch Changes
+
+- fix reactive params
+
 ## 2.0.3
 
 ### Patch Changes
