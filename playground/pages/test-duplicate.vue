@@ -21,24 +21,29 @@ import { ref, nextTick, onMounted, watch } from 'vue'
 import * as API from '../api'
 import { useAsyncData, useFetch } from '#imports'
 import { getArticleListData } from '~/api/ajax'
+import { CustomFetch } from '#imports'
+const ajax = new CustomFetch({
+  baseURL: '/api',
+  handler: (params) => {
+    console.log(params, 'params =======>')
+    return params
+  }
+})
+
 const page = ref(1)
 const list = ref<number[]>([])
 const num = ref<number>()
 let _refresh = () => {}
 const getList = async () => {
   const { data, refresh, pending, error, status } = await API.getList(page.value)
-  // const { data, refresh } = await useFetch('/api/get-list', {
-  //   params: {
-  //     page: page.value
-  //   }
-  // })
+
   if (page.value === 1) {
     list.value = data.value?.data || []
   } else {
     list.value = list.value.concat(data.value?.data || [])
   }
   _refresh = refresh
-  console.log(data.value, pending.value, error.value, status.value, 'data =====>')
+  console.log(data.value, 'data =====>')
 }
 
 const getNum = async () => {
@@ -55,7 +60,7 @@ const getNum = async () => {
 }
 
 await getList()
-await getNum()
+// await getNum()
 
 onMounted(async () => {
   await nextTick()
@@ -63,16 +68,9 @@ onMounted(async () => {
 })
 
 const loadMore = () => {
-  // if (page.value === 2) {
-  //   page.value = 2
-  // } else {
   page.value++
-  // }
   console.log(page.value, 'page.value -------')
-  // _refresh()
   getList()
   getList()
-  getNum()
-  // await nextTick
 }
 </script>

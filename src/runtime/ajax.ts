@@ -12,7 +12,7 @@ import type {
   KeysOf,
   PickFrom
 } from './type'
-import { createError, ref, toValue, unref, useAsyncData, useNuxtApp, type MaybeRef, type Ref } from '#imports'
+import { createError, reactive, ref, toValue, unref, useAsyncData, useNuxtApp, type MaybeRef, type Ref, watch as _watch } from '#imports'
 
 type CustomFetchReturnValue<DataT, ErrorT> = AsyncData<
   PickFrom<DataT, KeysOf<DataT>> | null,
@@ -79,20 +79,28 @@ export class CustomFetch {
   private baseConfig (config: HTTPConfig): HTTPConfig {
     const { useHandler = true, handler, query = {}, params = {} } = config
     const baseHandler = handler || this.baseHandler
-    const mergeObj = { ...params, ...query }
+    const _name = Object.keys(query).length ? 'query' : 'params'
+    const mergeObj = { ...query, ...params }
     if (useHandler && baseHandler && typeof baseHandler === 'function') {
-      return baseHandler({ ...mergeObj })
+      return {
+        [_name]: baseHandler(mergeObj)
+      }
     }
-    return { ...mergeObj }
+    return {
+      [_name]: {
+        ...mergeObj
+      }
+    }
   }
 
   http<DataT, ErrorT = Error | null> (
     url: NitroFetchRequest,
     config: HTTPConfig & { method: FetchMethod },
-    options?: AsyncDataOptions<DataT>
+    options: AsyncDataOptions<DataT> = {}
   ): CustomFetchReturnValue<DataT, ErrorT> {
     config.baseURL = config?.baseURL || this.baseURL
-    config.query = this.baseConfig(config)
+    Object.assign(config, this.baseConfig(config))
+
     if (process.client && navigator && !navigator.onLine) {
       config.offline && config.offline()
     }
@@ -103,8 +111,15 @@ export class CustomFetch {
       onResponse,
       onResponseError,
       offline,
+      handler,
+      useHandler,
+      immutableKey,
       ...restAjaxConfig
     } = config
+    const _config = reactive({
+      ...restAjaxConfig
+    })
+
     const defaultOptions = {
       onRequest (ctx: OnRequestType) {
         [interceptors.onRequest, onRequest].map(fn => fn && fn(ctx))
@@ -138,20 +153,22 @@ export class CustomFetch {
     }
 
     const hashValue: Array<string | undefined | Record<string, string>> = ['custom|', url as string]
-    if (!this.immutableKey) {
+    if (!this.immutableKey || !immutableKey) {
       hashValue.push(...generateOptionSegments(config))
     }
 
     const key = hash(hashValue)
 
-    const handler = () => {
+    options.default = options.default ?? (() => null)
+
+    const _handler = () => {
       if (_cachedController.get(key)) {
         _cachedController.get(key)?.abort?.()
       }
       return $fetch(url as string, {
         signal: _cachedController.get(key)?.signal,
         ...defaultOptions,
-        ...restAjaxConfig
+        ..._config
       }) as unknown as Promise<DataT>
     }
 
@@ -177,7 +194,7 @@ export class CustomFetch {
       asyncData.status.value = 'pending'
       const promise = new Promise<DataT>((resolve, reject) => {
         try {
-          resolve(handler())
+          resolve(_handler())
           _cachedController.set(key, controller)
         } catch (err) {
           reject(err)
@@ -209,7 +226,7 @@ export class CustomFetch {
       return promise as any
     }
 
-    return useAsyncData<DataT, ErrorT>(config.key || key, handler, options)
+    return useAsyncData<DataT, ErrorT>(config.key || key, _handler, options)
   }
 
   get<DataT, ErrorT = Error | null> (
