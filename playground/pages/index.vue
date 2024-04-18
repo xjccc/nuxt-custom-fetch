@@ -2,8 +2,17 @@
   <div class="container">
     主页
     {{ list?.totalpage }}
-    <NuxtLink to="/test">
-      Test page
+    <br>
+    <NuxtLink to="/test-reactive">
+      Test reactive
+    </NuxtLink>
+    <br>
+    <NuxtLink to="/test-duplicate">
+      Test duplicate
+    </NuxtLink>
+    <br>
+    <NuxtLink to="/test-handler">
+      Test handler
     </NuxtLink>
   </div>
 </template>
