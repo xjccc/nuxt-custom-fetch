@@ -10,9 +10,9 @@
 
 - 在下一个 nextTick 中执行，或者设置{server: false}，watch pending 变化
 
-2. 因为封装后，参数的`响应式丢失`，导致`watch`无法使用
+2. `refresh`和`execute`使用上也需要注意，参数不是响应式的，所以会一直是第一次请求的参数
 
-3. `refresh`和`execute`使用上也需要注意，参数不是响应式的，所以会一直是第一次请求的参数
+3. 如果传入响应式对象，使用`watch`监听，会自动重新请求
 
 
 ## HTTPOptions
