@@ -1,34 +1,19 @@
 import { hash } from 'ohash'
 import type { NitroFetchRequest } from 'nitropack'
 import type { AsyncData, AsyncDataOptions, AsyncDataRequestStatus, NuxtError } from 'nuxt/app'
-import type {
-  HTTPConfig,
-  Interceptors,
-  OnRequestErrorType,
-  OnRequestType,
-  OnResponseErrorType,
-  OnResponseType,
-  FetchMethod,
-  KeysOf,
-  PickFrom
-} from './type'
+import type { HTTPConfig, Interceptors, OnRequestErrorType, OnRequestType, OnResponseErrorType, OnResponseType, FetchMethod, KeysOf, PickFrom } from './type'
 import { createError, reactive, ref, toValue, unref, useAsyncData, useNuxtApp, type MaybeRef, type Ref, watch as _watch } from '#imports'
 
-type CustomFetchReturnValue<DataT, ErrorT> = AsyncData<
-  PickFrom<DataT, KeysOf<DataT>> | null,
-  | (ErrorT extends Error | NuxtError<unknown> ? ErrorT : NuxtError<ErrorT>)
-  | null
->;
+type CustomFetchReturnValue<DataT, ErrorT> = AsyncData<PickFrom<DataT, KeysOf<DataT>> | null, (ErrorT extends Error | NuxtError<unknown> ? ErrorT : NuxtError<ErrorT>) | null>
 
 const Noop = () => {}
-function generateOptionSegments (opts: HTTPConfig & { method: FetchMethod }) {
-  const segments: Array<string | undefined | Record<string, string>> = [
-    toValue(opts.method as MaybeRef<string | undefined> | undefined)?.toUpperCase() || 'GET',
-    toValue(opts.baseURL)
-  ]
+function generateOptionSegments(opts: HTTPConfig & { method: FetchMethod }) {
+  const segments: Array<string | undefined | Record<string, string>> = [toValue(opts.method as MaybeRef<string | undefined> | undefined)?.toUpperCase() || 'GET', toValue(opts.baseURL)]
   for (const _obj of [opts.params || opts.query]) {
     const obj = toValue(_obj)
-    if (!obj) { continue }
+    if (!obj) {
+      continue
+    }
 
     const unwrapped: Record<string, string> = {}
     for (const [key, value] of Object.entries(obj)) {
@@ -38,10 +23,10 @@ function generateOptionSegments (opts: HTTPConfig & { method: FetchMethod }) {
   }
   return segments
 }
-function pick (obj: Record<string, any>, keys: string[]) {
-  const newObj = {}
+function pick(obj: Record<string, any>, keys: string[]) {
+  const newObj: any = {}
   for (const key of keys) {
-    (newObj as any)[key] = obj[key]
+    newObj[key] = obj[key]
   }
   return newObj
 }
@@ -56,7 +41,7 @@ export class CustomFetch {
   interceptors: Interceptors = {}
   offline = Noop
 
-  constructor (config: HTTPConfig = { baseURL: '' }) {
+  constructor(config: HTTPConfig = { baseURL: '' }) {
     this.params = {
       ...config
     }
@@ -76,7 +61,7 @@ export class CustomFetch {
     }
   }
 
-  private baseConfig (config: HTTPConfig): HTTPConfig {
+  private baseConfig(config: HTTPConfig): HTTPConfig {
     const { useHandler = true, handler, query = {}, params = {} } = config
     const baseHandler = handler || this.baseHandler
     const _name = Object.keys(query).length ? 'query' : 'params'
@@ -93,41 +78,26 @@ export class CustomFetch {
     }
   }
 
-  http<DataT, ErrorT = Error | null> (
-    url: NitroFetchRequest,
-    config: HTTPConfig & { method: FetchMethod },
-    options: AsyncDataOptions<DataT> = {}
-  ): CustomFetchReturnValue<DataT, ErrorT> {
+  http<DataT, ErrorT = Error | null>(url: NitroFetchRequest, config: HTTPConfig & { method: FetchMethod }, options: AsyncDataOptions<DataT> = {}): CustomFetchReturnValue<DataT, ErrorT> {
     config.baseURL = config?.baseURL || this.baseURL
     Object.assign(config, this.baseConfig(config))
 
     if (process.client && navigator && !navigator.onLine) {
-      config.offline && config.offline()
+      if (config.offline) config.offline()
     }
     const interceptors = this.interceptors
-    const {
-      onRequest,
-      onRequestError,
-      onResponse,
-      onResponseError,
-      offline,
-      handler,
-      useHandler,
-      immutableKey,
-      ...restAjaxConfig
-    } = config
+    const { onRequest, onRequestError, onResponse, onResponseError, offline, handler, useHandler, immutableKey, ...restAjaxConfig } = config
     const _config = reactive({
       ...restAjaxConfig
     })
 
     const defaultOptions = {
-      onRequest (ctx: OnRequestType) {
-        [interceptors.onRequest, onRequest].map(fn => fn && fn(ctx))
+      onRequest(ctx: OnRequestType) {
+        [interceptors.onRequest, onRequest].forEach((fn) => fn?.(ctx))
       },
-      onRequestError (ctx: OnRequestErrorType) {
-        [interceptors.onRequestError, onRequestError].map(
-          fn => fn && fn(ctx)
-        )
+      onRequestError(ctx: OnRequestErrorType) {
+        [interceptors.onRequestError, onRequestError].forEach((fn) => fn?.(ctx))
+
         throw createError({
           statusCode: ctx.error.statusCode,
           statusMessage: ctx.error.message,
@@ -135,14 +105,12 @@ export class CustomFetch {
           fatal: true
         })
       },
-      onResponse (ctx: OnResponseType) {
-        interceptors.onResponse && interceptors.onResponse(ctx)
-        onResponse && onResponse(ctx)
+      onResponse(ctx: OnResponseType) {
+        if (interceptors.onResponse) interceptors.onResponse(ctx)
+        if (onResponse) onResponse(ctx)
       },
-      onResponseError (ctx: OnResponseErrorType) {
-        [interceptors.onResponseError, onResponseError].map(
-          fn => fn && fn(ctx)
-        )
+      onResponseError(ctx: OnResponseErrorType) {
+        [interceptors.onResponseError, onResponseError].forEach((fn) => fn?.(ctx))
         throw createError({
           statusCode: ctx.response.status,
           statusMessage: ctx.request.toString(),
@@ -173,7 +141,7 @@ export class CustomFetch {
     }
 
     const nuxtApp = useNuxtApp()
-    const controller = typeof AbortController !== 'undefined' ? new AbortController() : {} as AbortController
+    const controller = typeof AbortController !== 'undefined' ? new AbortController() : ({} as AbortController)
 
     // const instance = getCurrentInstance()
     // if (import.meta.client && !nuxtApp.isHydrating && (!instance || instance?.isMounted)) {
@@ -199,20 +167,21 @@ export class CustomFetch {
         } catch (err) {
           reject(err)
         }
-      }).then(async (_result) => {
-        let result = _result as unknown as DataT
-        if (options?.transform) {
-          result = await options.transform(_result)
-        }
-        if (options?.pick) {
-          result = pick(result as any, options.pick) as DataT
-        }
-
-        asyncData.data.value = result
-        asyncData.error.value = null
-        asyncData.status.value = 'success'
-        return asyncData
       })
+        .then(async (_result) => {
+          let result = _result as unknown as DataT
+          if (options?.transform) {
+            result = await options.transform(_result)
+          }
+          if (options?.pick) {
+            result = pick(result as any, options.pick) as DataT
+          }
+
+          asyncData.data.value = result
+          asyncData.error.value = null
+          asyncData.status.value = 'success'
+          return asyncData
+        })
         .catch((error: any) => {
           asyncData.error.value = createError(error) as any
           asyncData.data.value = unref(options?.default!())
@@ -229,23 +198,11 @@ export class CustomFetch {
     return useAsyncData<DataT, ErrorT>(config.key || key, _handler, options)
   }
 
-  get<DataT, ErrorT = Error | null> (
-    url: NitroFetchRequest,
-    config: HTTPConfig = {},
-    options?: AsyncDataOptions<DataT>
-  ) {
+  get<DataT, ErrorT = Error | null>(url: NitroFetchRequest, config: HTTPConfig = {}, options?: AsyncDataOptions<DataT>) {
     return this.http<DataT, ErrorT>(url, { ...config, method: 'GET' }, options)
   }
 
-  post<DataT, ErrorT = Error | null> (
-    url: NitroFetchRequest,
-    config: HTTPConfig = {},
-    options?: AsyncDataOptions<DataT>
-  ) {
-    return this.http<DataT, ErrorT>(
-      url,
-      { ...config, method: 'POST' },
-      options
-    )
+  post<DataT, ErrorT = Error | null>(url: NitroFetchRequest, config: HTTPConfig = {}, options?: AsyncDataOptions<DataT>) {
+    return this.http<DataT, ErrorT>(url, { ...config, method: 'POST' }, options)
   }
 }
