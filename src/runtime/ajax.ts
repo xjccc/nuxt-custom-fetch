@@ -6,8 +6,8 @@ import { type MaybeRef, type Ref, createError, reactive, ref, toValue, unref, us
 
 type CustomFetchReturnValue<DataT, ErrorT> = AsyncData<PickFrom<DataT, KeysOf<DataT>> | null, (ErrorT extends Error | NuxtError<unknown> ? ErrorT : NuxtError<ErrorT>) | null>
 
-function Noop() {}
-function generateOptionSegments(opts: HTTPConfig & { method: FetchMethod }) {
+function Noop () {}
+function generateOptionSegments (opts: HTTPConfig & { method: FetchMethod }) {
   const segments: Array<string | undefined | Record<string, string>> = [toValue(opts.method as MaybeRef<string | undefined> | undefined)?.toUpperCase() || 'GET', toValue(opts.baseURL)]
   for (const _obj of [opts.params || opts.query]) {
     const obj = toValue(_obj)
@@ -24,7 +24,7 @@ function generateOptionSegments(opts: HTTPConfig & { method: FetchMethod }) {
   }
   return segments
 }
-function pick(obj: Record<string, any>, keys: string[]) {
+function pick (obj: Record<string, any>, keys: string[]) {
   const newObj: any = {}
   for (const key of keys) {
     newObj[key] = obj[key]
@@ -43,7 +43,7 @@ export class CustomFetch {
   interceptors: Interceptors = {}
   offline = Noop
 
-  constructor(config: HTTPConfig = { baseURL: '' }) {
+  constructor (config: HTTPConfig = { baseURL: '' }) {
     this.params = { ...config }
     this.baseURL = config.baseURL
     this.immutableKey = config.immutableKey ?? false
@@ -62,7 +62,7 @@ export class CustomFetch {
     }
   }
 
-  private baseConfig(config: HTTPConfig): HTTPConfig {
+  private baseConfig (config: HTTPConfig): HTTPConfig {
     const { useHandler = true, handler, query = {}, params = {} } = config
     const baseHandler = handler || this.baseHandler
     const _name = Object.keys(query).length ? 'query' : 'params'
@@ -77,7 +77,7 @@ export class CustomFetch {
     return { [_name]: { ...mergeObj } }
   }
 
-  http<DataT, ErrorT = Error | null>(url: NitroFetchRequest, config: HTTPConfig & { method: FetchMethod }, options: AsyncDataOptions<DataT> = {}): CustomFetchReturnValue<DataT, ErrorT> {
+  http<DataT, ErrorT = Error | null> (url: NitroFetchRequest, config: HTTPConfig & { method: FetchMethod }, options: AsyncDataOptions<DataT> = {}): CustomFetchReturnValue<DataT, ErrorT> {
     config.baseURL = config?.baseURL || this.baseURL
     Object.assign(config, this.baseConfig(config))
 
@@ -93,10 +93,10 @@ export class CustomFetch {
     const _config = reactive({ ...restAjaxConfig })
 
     const defaultOptions = {
-      onRequest(ctx: OnRequestType) {
+      onRequest (ctx: OnRequestType) {
         [interceptors.onRequest, onRequest].forEach(fn => fn?.(ctx))
       },
-      onRequestError(ctx: OnRequestErrorType) {
+      onRequestError (ctx: OnRequestErrorType) {
         [interceptors.onRequestError, onRequestError].forEach(fn => fn?.(ctx))
 
         throw createError({
@@ -106,7 +106,7 @@ export class CustomFetch {
           fatal: true
         })
       },
-      onResponse(ctx: OnResponseType) {
+      onResponse (ctx: OnResponseType) {
         if (interceptors.onResponse) {
           interceptors.onResponse(ctx)
         }
@@ -114,7 +114,7 @@ export class CustomFetch {
           onResponse(ctx)
         }
       },
-      onResponseError(ctx: OnResponseErrorType) {
+      onResponseError (ctx: OnResponseErrorType) {
         [interceptors.onResponseError, onResponseError].forEach(fn => fn?.(ctx))
         throw createError({
           statusCode: ctx.response.status,
@@ -206,14 +206,14 @@ export class CustomFetch {
     return useAsyncData<DataT, ErrorT>(config.key || key, _handler, options)
   }
 
-  get<DataT, ErrorT = Error | null>(url: NitroFetchRequest, config: HTTPConfig = {}, options?: AsyncDataOptions<DataT>) {
+  get<DataT, ErrorT = Error | null> (url: NitroFetchRequest, config: HTTPConfig = {}, options?: AsyncDataOptions<DataT>) {
     return this.http<DataT, ErrorT>(url, {
       ...config,
       method: 'GET'
     }, options)
   }
 
-  post<DataT, ErrorT = Error | null>(url: NitroFetchRequest, config: HTTPConfig = {}, options?: AsyncDataOptions<DataT>) {
+  post<DataT, ErrorT = Error | null> (url: NitroFetchRequest, config: HTTPConfig = {}, options?: AsyncDataOptions<DataT>) {
     return this.http<DataT, ErrorT>(url, {
       ...config,
       method: 'POST'

@@ -62,7 +62,7 @@ export declare class CustomFetch {
   baseHandler: HTTPConfig['handler']
   interceptors: Interceptors
   offline: typeof Noop
-  constructor(config?: HTTPConfig)
+  constructor (config?: HTTPConfig)
   private baseConfig
   http<DataT, ErrorT = Error | null>(url: NitroFetchRequest, config: HTTPConfig & {
     method: FetchMethod

@@ -20,7 +20,7 @@ export default defineEventHandler(async (event) => {
   }
 })
 
-function getNumbersForPage(page: number) {
+function getNumbersForPage (page: number) {
   const itemsPerPage = 10
   const start = (page - 1) * itemsPerPage + 1
   const numbers = []

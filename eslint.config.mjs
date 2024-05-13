@@ -25,7 +25,9 @@ export default antfu(
       'object-curly-newline': ['error', {
         multiline: true,
         consistent: true
-      }]
+      }],
+      'style/space-before-function-paren': [2, 'always'],
+      'style/space-before-blocks': [2, 'always']
     }
   }
 )

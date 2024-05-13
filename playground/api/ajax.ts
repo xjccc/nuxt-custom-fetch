@@ -3,7 +3,7 @@ import { CustomFetch } from '#imports'
 
 const ajax = new CustomFetch({
   baseURL: '',
-  handler(params = {}) {
+  handler (params = {}) {
     const obj = JSON.stringify(params)
     return { a: obj }
   }
@@ -31,7 +31,7 @@ export interface ArticleInfo {
 }
 
 // 获取经销商列表
-export function getArticleListData(params: FetchOptions['params']) {
+export function getArticleListData (params: FetchOptions['params']) {
   return ajax.get<ArticleInfo>('/Article/GetSubCategorySeriesInfo', {
     key: '',
     query: params,
