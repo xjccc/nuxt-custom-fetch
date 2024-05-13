@@ -16,8 +16,9 @@
     </NuxtLink>
   </div>
 </template>
+
 <script setup lang="ts">
-import { ref, onMounted, nextTick } from 'vue'
+import { nextTick, onMounted, ref } from 'vue'
 import { type ArticleInfo, getArticleListData } from '../api/ajax'
 // const { data, error, pending } = await getInfo<{ip: string}>({
 //   sign: 123,
@@ -32,7 +33,9 @@ const getApi = async () => {
     PageSize: 6
   })
 
-  if (!data.value) { return }
+  if (!data.value) {
+    return
+  }
   list.value = data.value
 }
 
@@ -41,5 +44,6 @@ onMounted(async () => {
   getApi()
 })
 </script>
+
 <style lang="less" scoped>
 </style>

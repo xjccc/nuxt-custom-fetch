@@ -16,19 +16,10 @@
     </button>
   </div>
 </template>
+
 <script setup lang="ts">
-import { ref, nextTick, onMounted, watch } from 'vue'
+import { nextTick, onMounted, ref } from 'vue'
 import * as API from '../api'
-import { useAsyncData, useFetch } from '#imports'
-import { getArticleListData } from '~/api/ajax'
-import { CustomFetch } from '#imports'
-const ajax = new CustomFetch({
-  baseURL: '/api',
-  handler: (params) => {
-    console.log(params, 'params =======>')
-    return params
-  }
-})
 
 const page = ref(1)
 const list = ref<number[]>([])
@@ -39,11 +30,12 @@ const getList = async () => {
 
   if (page.value === 1) {
     list.value = data.value?.data || []
-  } else {
+  }
+  else {
     list.value = list.value.concat(data.value?.data || [])
   }
   _refresh = refresh
-  console.log(data.value, 'data =====>')
+  console.log(data.value, pending.value, error.value, status.value, 'data =====>')
 }
 
 const getNum = async () => {
@@ -55,12 +47,12 @@ const getNum = async () => {
   // })
   if (data.value) {
     num.value = data.value.nums
-    console.log(data.value, 'nums =====>')
+    console.log(data.value, refresh, pending.value, error.value, status.value, 'nums =====>')
   }
 }
 
 await getList()
-// await getNum()
+await getNum()
 
 onMounted(async () => {
   await nextTick()

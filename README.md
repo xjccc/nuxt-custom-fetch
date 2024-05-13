@@ -2,6 +2,8 @@
 
 简单封装 useAsyncData
 
+`version > 3.0.0`
+
 ## 注意
 
 请求的使用形式，类似于之前的`ajax`，修改参数后，重新调用封装方法。
@@ -14,122 +16,7 @@
 
 3. 如果传入响应式对象，使用`watch`监听，会自动重新请求
 
-
-## HTTPOptions
-
-实例化全局 CustomFetch
-
-```ts
-{
-  baseURL?: string
-  handler?: (params: Record<string, any>) => Record<string, any>
-  offline?: () => void
-}
-```
-
-### baseURL
-
-当前实例下的 baseURL
-
-### handler
-
-处理 query & params 的自定义函数
-
-```ts
-{
-  handler({...query, ...params}) {
-    return {}
-  }
-}
-```
-
-### 请求-响应拦截
-
-```ts
-{
-  onRequest?: ({ request, options }: {
-    request: FetchRequest
-    options: FetchOptions
-  }) => void
-  onRequestError?: ({
-    request,
-    options,
-    error
-  }: {
-    request: FetchRequest
-    options: FetchOptions
-    error: FetchError
-  }) => void
-  onResponse?: ({
-    request,
-    response,
-    options
-  }: {
-    request: FetchRequest
-    options: FetchOptions
-    response: FetchResponse<any>
-  }) => Promise<void> | void
-  onResponseError?: ({
-    request,
-    response,
-    options
-  }: {
-    request: FetchRequest
-    options: FetchOptions
-    response: FetchResponse<any>
-  }) => void
-}
-```
-
-## 实例方法
-
-`http|get|post`
-
-### offline
-
-客户端中，离线时调用(判断 navigator.onLine)
-
-## ajax - 传参
-
-### fetchOptions
-
-```ts
-interface fetchOptions {
-  baseURL?: string
-  key?: string
-  body?: RequestInit['body'] | Record<string, any>
-  useHandler: HTTPConfig['useHandler']
-  handler: HTTPConfig['handler']
-  params?: SearchParameters
-  query?: SearchParameters
-  parseResponse?: (responseText: string) => any
-  responseType?: R
-  response?: boolean
-  retry?: number | false
-  onRequest?(context: FetchContext): Promise<void> | void
-  onRequestError?(
-    context: FetchContext & {
-      error: Error
-    }
-  ): Promise<void> | void
-  onResponse?(
-    context: FetchContext & {
-      response: FetchResponse<R>
-    }
-  ): Promise<void> | void
-  onResponseError?(
-    context: FetchContext & {
-      response: FetchResponse<R>
-    }
-  ): Promise<void> | void
-}
-```
-
-### Type
-
-[type](https://nuxt.com/docs/api/composables/use-async-data#type)
-
-## 使用方式
+## 安装
 
 ```bash
 pnpm add nuxt-custom-fetch
@@ -140,25 +27,97 @@ pnpm add nuxt-custom-fetch
 export default defineNuxtConfig({
   modules: ['nuxt-custom-fetch']
 })
+```
 
-// ajax.ts文件
-import type { FetchOptions } from 'ofetch'
+## 使用
+
+实例化全局 CustomFetch
+
+```ts
 const ajax = new CustomFetch({
-  baseURL: '',
-  // 全局处理query\params的方法
-  handler: (params = {}) => {
-    params.aa = 111
-    return params
-  }
+  baseURL: ''
 })
 
+// `http|get|post`
+ajax.get('/api/user')
+
+ajax.post('/api/user')
+
+ajax.http({
+  method: 'GET'
+})
+```
+
+## 类型
+
+### useAsyncDataType
+
+[use-async-data-type](https://nuxt.com/docs/api/composables/use-async-data#type)
+
+```ts
+export declare class CustomFetch {
+  baseURL: any
+  immutableKey: boolean
+  params: HTTPConfig
+  baseHandler: HTTPConfig['handler']
+  interceptors: Interceptors
+  offline: typeof Noop
+  constructor(config?: HTTPConfig)
+  private baseConfig
+  http<DataT, ErrorT = Error | null>(url: NitroFetchRequest, config: HTTPConfig & {
+    method: FetchMethod
+  }, options?: AsyncDataOptions<DataT>): CustomFetchReturnValue<DataT, ErrorT>
+  get<DataT, ErrorT = Error | null>(url: NitroFetchRequest, config?: HTTPConfig, options?: AsyncDataOptions<DataT>): CustomFetchReturnValue<DataT, ErrorT>
+  post<DataT, ErrorT = Error | null>(url: NitroFetchRequest, config?: HTTPConfig, options?: AsyncDataOptions<DataT>): CustomFetchReturnValue<DataT, ErrorT>
+}
+
+export interface OnRequestType {
+  request: FetchRequest
+  options: FetchOptions
+}
+export interface OnRequestErrorType {
+  request: FetchRequest
+  options: FetchOptions
+  error: FetchError
+}
+export interface OnResponseType {
+  request: FetchRequest
+  options: FetchOptions
+  response: FetchResponse<any>
+}
+export interface OnResponseErrorType {
+  request: FetchRequest
+  options: FetchOptions
+  response: FetchResponse<any>
+}
+export type FetchMethod = 'options' | 'GET' | 'POST' | 'get' | 'HEAD' | 'PATCH' | 'PUT' | 'DELETE' | 'CONNECT' | 'OPTIONS' | 'TRACE' | 'post' | 'head' | 'patch' | 'put' | 'delete' | 'connect' | 'trace' | undefined
+export interface HTTPConfig extends Omit<FetchOptions, 'method'> {
+  key?: string
+  immutableKey?: boolean
+  baseURL?: string
+  useHandler?: boolean
+  handler?: (params: Record<string, any>) => Record<string, any>
+  offline?: () => void
+}
+export interface Interceptors {
+  onRequest?: FetchOptions['onRequest']
+  onRequestError?: FetchOptions['onRequestError']
+  onResponse?: FetchOptions['onResponse']
+  onResponseError?: FetchOptions['onResponseError']
+}
+```
+
+## 示例
+
+```ts
+// api.ts
 export const getInfo = (params: Record<string, any>) =>
-  ajax.get<DataT>('/api/get-ip', { params }, options?: AsyncDataOptions<DataT>)
+  ajax.get<DataT>('/api/get-ip', { params }, {})
 ```
 
 ```ts
+// index.vue
 import { getInfo } from './ajax'
-
 const { data, error, pending } = await getInfo({
   sign: 123
 })

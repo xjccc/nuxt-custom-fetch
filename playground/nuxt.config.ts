@@ -11,7 +11,7 @@ export default defineNuxtConfig({
     devProxy: {
       '/proxy/cms': {
         target: 'https://cms-api-test.360che.com',
-        changeOrigin: true 
+        changeOrigin: true
       }
     }
   }

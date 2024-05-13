@@ -1,5 +1,5 @@
-import { fileURLToPath } from 'url'
-import { defineNuxtModule, createResolver, addImports } from '@nuxt/kit'
+import { fileURLToPath } from 'node:url'
+import { addImports, createResolver, defineNuxtModule } from '@nuxt/kit'
 
 export interface ModuleOptions {}
 
