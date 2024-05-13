@@ -35,6 +35,4 @@ export const getArticleListData = (params: FetchOptions['params']) => ajax.get<A
   key: '',
   query: params,
   baseURL: '/proxy/cms'
-}, {
-  pick: ['totalpage']
-})
+}, { pick: ['totalpage'] })

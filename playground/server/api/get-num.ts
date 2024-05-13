@@ -9,7 +9,5 @@ export default defineEventHandler(async (event) => {
     }, 2000)
   })
 
-  return {
-    nums: page
-  }
+  return { nums: page }
 })
