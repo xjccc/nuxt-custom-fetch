@@ -30,6 +30,11 @@
     "prepare": "husky",
     "release": "changelogen --release && pnpm prepack && npm publish && git push --follow-tags"
   },
+  "config": {
+    "commitizen": {
+      "path": "node_modules/cz-git"
+    }
+  },
   "husky": {
     "hooks": {
       "pre-commit": "lint-staged"
