@@ -55,19 +55,18 @@ export default [
         }
       ],
       'function-paren-newline': ['error', 'multiline'],
-      'object-property-newline': [
-        'error',
-        {
-          allowAllPropertiesOnSameLine: false
-        }
-      ],
       'object-curly-spacing': ['error', 'always'],
       'object-curly-newline': [
         'error',
         {
-          ObjectExpression: { multiline: true, minProperties: 2 },
-          ObjectPattern: { multiline: true },
-          ImportDeclaration: 'never'
+          multiline: true,
+          consistent: true
+        }
+      ],
+      'object-property-newline': [
+        'error',
+        {
+          allowAllPropertiesOnSameLine: false
         }
       ]
     }
