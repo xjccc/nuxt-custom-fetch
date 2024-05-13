@@ -1,5 +1,5 @@
-import { fileURLToPath } from 'url'
-import { defineNuxtModule, createResolver, addImports } from '@nuxt/kit'
+import { fileURLToPath } from 'node:url'
+import { addImports, createResolver, defineNuxtModule } from '@nuxt/kit'
 
 export interface ModuleOptions {}
 
@@ -9,7 +9,7 @@ export default defineNuxtModule<ModuleOptions>({
     configKey: 'customFetch'
   },
   defaults: {},
-  setup(options, nuxt) {
+  setup (options, nuxt) {
     const { resolve } = createResolver(import.meta.url)
     const runtimeDir = fileURLToPath(new URL('./runtime', import.meta.url))
     nuxt.options.build.transpile.push(runtimeDir)

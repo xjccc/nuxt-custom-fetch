@@ -8,11 +8,10 @@
     </button>
   </div>
 </template>
-<script setup lang="ts">
-import { ref, nextTick, onMounted } from 'vue'
-import { CustomFetch } from '#imports'
 
-const page1 = ref(2)
+<script setup lang="ts">
+import { nextTick, onMounted, ref } from 'vue'
+import { CustomFetch } from '#imports'
 
 const ajax = new CustomFetch({
   baseURL: '/api',
@@ -28,7 +27,7 @@ const ajax = new CustomFetch({
 const page = ref(1)
 const list = ref<number[]>([])
 const getList = async () => {
-  const { data } = await ajax.get<{data: number[]}>('/api/get-list', {
+  const { data } = await ajax.get<{ data: number[] }>('/api/get-list', {
     params: {
       type: 'params'
     },
@@ -40,7 +39,8 @@ const getList = async () => {
 
   if (page.value === 1) {
     list.value = data.value?.data || []
-  } else {
+  }
+  else {
     list.value = list.value.concat(data.value?.data || [])
   }
   console.log(data.value, 'data =====>')

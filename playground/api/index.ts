@@ -1,37 +1,24 @@
-import { CustomFetch, watch, type Ref } from '#imports'
-const ajax = new CustomFetch({
-  baseURL: '/api'
-})
+import { CustomFetch, type Ref } from '#imports'
 
-export const getListReactive = (page: Ref<number>) => {
+const ajax = new CustomFetch({ baseURL: '/api' })
+
+export function getListReactive (page: Ref<number>) {
   return ajax.get<{
-    data: number[],
+    data: number[]
     nums: number
-  }>('/get-list', {
-    params: {
-      page
-    }
-  }, { watch: [() => page.value] })
+  }>('/get-list', { params: { page } }, { watch: [() => page.value] })
 }
 
-export const getList = (page: number) => {
+export function getList (page: number) {
   return ajax.get<{
-    data: number[],
+    data: number[]
     nums: number
-  }>('/get-list', {
-    params: {
-      page
-    }
-  })
+  }>('/get-list', { params: { page } })
 }
 
-export const getNum = (page: number) => {
+export function getNum (page: number) {
   return ajax.get<{
-    data: number[],
+    data: number[]
     nums: number
-  }>('/get-num', {
-    params: {
-      page
-    }
-  })
+  }>('/get-num', { params: { page } })
 }
