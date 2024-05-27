@@ -1,5 +1,60 @@
 # nuxt-custom-fetch
 
+## v2.1.0
+
+
+### 🚀 Enhancements
+
+- 创建nuxt-custom-fetch ([77f946f](https://github.com/xjccc/nuxt-custom-fetch/commit/77f946f))
+- Nuxt-custom-fetch添加key ([2a56d35](https://github.com/xjccc/nuxt-custom-fetch/commit/2a56d35))
+- 增加useParamsHandler\paramsHandler ([3a9f7ca](https://github.com/xjccc/nuxt-custom-fetch/commit/3a9f7ca))
+- ImmutableKey ([b0fae1d](https://github.com/xjccc/nuxt-custom-fetch/commit/b0fae1d))
+- Commitlint ([82f0fd9](https://github.com/xjccc/nuxt-custom-fetch/commit/82f0fd9))
+- Cz-git ([f53e1bc](https://github.com/xjccc/nuxt-custom-fetch/commit/f53e1bc))
+- Lint-staged ([54b3ad0](https://github.com/xjccc/nuxt-custom-fetch/commit/54b3ad0))
+
+### 🩹 Fixes
+
+- 修改版本号 ([8c8df3b](https://github.com/xjccc/nuxt-custom-fetch/commit/8c8df3b))
+- 更新playground ([4462a03](https://github.com/xjccc/nuxt-custom-fetch/commit/4462a03))
+- 修改devProxy ([0e9a591](https://github.com/xjccc/nuxt-custom-fetch/commit/0e9a591))
+- Custom-fetch type ([948d72f](https://github.com/xjccc/nuxt-custom-fetch/commit/948d72f))
+- Generate hash with url ([e3a3337](https://github.com/xjccc/nuxt-custom-fetch/commit/e3a3337))
+- ParamsHandler ([701b16c](https://github.com/xjccc/nuxt-custom-fetch/commit/701b16c))
+- Type ([c84c6f2](https://github.com/xjccc/nuxt-custom-fetch/commit/c84c6f2))
+- Url type ([d02ccfc](https://github.com/xjccc/nuxt-custom-fetch/commit/d02ccfc))
+- Client fetch use $fetch ([85d3977](https://github.com/xjccc/nuxt-custom-fetch/commit/85d3977))
+- Add auto-key ([e73295c](https://github.com/xjccc/nuxt-custom-fetch/commit/e73295c))
+- Reactive params ([e173c5d](https://github.com/xjccc/nuxt-custom-fetch/commit/e173c5d))
+
+### 💅 Refactors
+
+- Get\post ([13a03e6](https://github.com/xjccc/nuxt-custom-fetch/commit/13a03e6))
+- Generate hash key ([b3edd53](https://github.com/xjccc/nuxt-custom-fetch/commit/b3edd53))
+
+### 📖 Documentation
+
+- Readme ([85d7f7c](https://github.com/xjccc/nuxt-custom-fetch/commit/85d7f7c))
+- Update ([36d600f](https://github.com/xjccc/nuxt-custom-fetch/commit/36d600f))
+
+### 📦 Build
+
+- Update nuxt@3.8 ([9bd4327](https://github.com/xjccc/nuxt-custom-fetch/commit/9bd4327))
+- Release ([57f30ae](https://github.com/xjccc/nuxt-custom-fetch/commit/57f30ae))
+- V2.0.0 ([e98cf75](https://github.com/xjccc/nuxt-custom-fetch/commit/e98cf75))
+- V2.0.1 ([ee7b903](https://github.com/xjccc/nuxt-custom-fetch/commit/ee7b903))
+
+### 🏡 Chore
+
+- Delete eslint ([16b4f84](https://github.com/xjccc/nuxt-custom-fetch/commit/16b4f84))
+- Delete @nuxtjs/eslint-config-typescript ([9f537f9](https://github.com/xjccc/nuxt-custom-fetch/commit/9f537f9))
+- Remove eslint-plugin-vue ([14c2e00](https://github.com/xjccc/nuxt-custom-fetch/commit/14c2e00))
+- Postinstall -> prepare ([8d5fd0c](https://github.com/xjccc/nuxt-custom-fetch/commit/8d5fd0c))
+
+### ❤️ Contributors
+
+- Xjccc ([@xjccc](http://github.com/xjccc))
+
 ## 2.0.4
 
 ### Patch Changes
