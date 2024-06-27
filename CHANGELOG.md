@@ -1,5 +1,17 @@
 # nuxt-custom-fetch
 
+## v2.1.1
+
+[compare changes](https://github.com/xjccc/nuxt-custom-fetch/compare/v2.1.0...v2.1.1)
+
+### 🩹 Fixes
+
+- Set immutableKey ([abbcbcf](https://github.com/xjccc/nuxt-custom-fetch/commit/abbcbcf))
+
+### ❤️ Contributors
+
+- Xjccc ([@xjccc](http://github.com/xjccc))
+
 ## v2.1.0
 
 
