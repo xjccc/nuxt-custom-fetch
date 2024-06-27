@@ -126,7 +126,7 @@ export class CustomFetch {
     }
 
     const hashValue: Array<string | undefined | Record<string, string>> = ['custom|', url as string]
-    if (!this.immutableKey || !immutableKey) {
+    if (!this.immutableKey && !immutableKey) {
       hashValue.push(...generateOptionSegments(config))
     }
 
