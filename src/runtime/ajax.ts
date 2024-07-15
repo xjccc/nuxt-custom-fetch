@@ -154,6 +154,9 @@ export class CustomFetch {
     if (import.meta.client && !nuxtApp.isHydrating) {
       const asyncData: {
         data: Ref<any>
+        /**
+         * @deprecated This may be removed in a future major version.
+         */
         pending: Ref<boolean>
         error: Ref<(ErrorT extends Error | NuxtError<unknown> ? ErrorT : NuxtError<ErrorT>) | null>
         status: Ref<AsyncDataRequestStatus>
