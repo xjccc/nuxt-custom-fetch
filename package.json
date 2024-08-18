@@ -41,12 +41,12 @@
     "typescript": "^5.5.4"
   },
   "devDependencies": {
-    "@antfu/eslint-config": "^2.25.1",
+    "@antfu/eslint-config": "^2.26.0",
     "@commitlint/cli": "^19.4.0",
     "@commitlint/config-conventional": "^19.2.2",
     "@nuxt/module-builder": "^0.8.3",
     "@nuxt/schema": "^3.12.4",
-    "@types/node": "^20.14.15",
+    "@types/node": "^20.15.0",
     "changelogen": "^0.5.5",
     "commitizen": "^4.3.0",
     "cz-git": "^1.9.4",
