@@ -46,7 +46,7 @@
     "@commitlint/config-conventional": "^19.2.2",
     "@nuxt/module-builder": "^0.8.3",
     "@nuxt/schema": "^3.12.4",
-    "@types/node": "^20.15.0",
+    "@types/node": "^20.16.1",
     "changelogen": "^0.5.5",
     "commitizen": "^4.3.0",
     "cz-git": "^1.9.4",
