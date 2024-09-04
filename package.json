@@ -46,13 +46,13 @@
     "@commitlint/config-conventional": "^19.4.1",
     "@nuxt/module-builder": "^0.8.3",
     "@nuxt/schema": "^3.13.0",
-    "@types/node": "^20.16.2",
+    "@types/node": "^20.16.4",
     "changelogen": "^0.5.5",
     "commitizen": "^4.3.0",
     "cz-git": "^1.9.4",
     "eslint": "^9.9.1",
     "husky": "^9.1.5",
-    "lint-staged": "^15.2.9",
+    "lint-staged": "^15.2.10",
     "nuxt": "^3.13.0"
   },
   "husky": {
