@@ -36,7 +36,7 @@
     }
   },
   "dependencies": {
-    "@nuxt/kit": "^3.13.2",
+    "@nuxt/kit": "^3.14.0",
     "ohash": "^1.1.4",
     "typescript": "^5.6.3"
   },
@@ -45,15 +45,15 @@
     "@commitlint/cli": "^19.5.0",
     "@commitlint/config-conventional": "^19.5.0",
     "@nuxt/module-builder": "^0.8.4",
-    "@nuxt/schema": "^3.13.2",
-    "@types/node": "^22.8.2",
+    "@nuxt/schema": "^3.14.0",
+    "@types/node": "^22.9.0",
     "changelogen": "^0.5.7",
     "commitizen": "^4.3.1",
     "cz-git": "^1.10.1",
-    "eslint": "^9.13.0",
+    "eslint": "^9.14.0",
     "husky": "^9.1.6",
     "lint-staged": "^15.2.10",
-    "nuxt": "^3.13.2"
+    "nuxt": "^3.14.0"
   },
   "husky": {
     "hooks": {
