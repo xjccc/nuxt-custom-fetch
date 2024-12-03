@@ -1,5 +1,17 @@
 # nuxt-custom-fetch
 
+## v2.1.2
+
+[compare changes](https://github.com/xjccc/nuxt-custom-fetch/compare/v2.1.1...v2.1.2)
+
+### 📖 Documentation
+
+- Deprecate pending ([74c9330](https://github.com/xjccc/nuxt-custom-fetch/commit/74c9330))
+
+### ❤️ Contributors
+
+- Xjccc ([@xjccc](http://github.com/xjccc))
+
 ## v2.1.1
 
 [compare changes](https://github.com/xjccc/nuxt-custom-fetch/compare/v2.1.0...v2.1.1)
