@@ -1,5 +1,9 @@
 # nuxt-custom-fetch
 
+## v2.1.2
+
+[compare changes](https://github.com/xjccc/nuxt-custom-fetch/compare/v2.1.3...v2.1.2)
+
 ## v2.1.3
 
 [compare changes](https://github.com/xjccc/nuxt-custom-fetch/compare/v2.1.2...v2.1.3)
