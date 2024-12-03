@@ -10,8 +10,8 @@
 </template>
 
 <script setup lang="ts">
-import { nextTick, onMounted, ref } from 'vue'
 import { CustomFetch } from '#imports'
+import { nextTick, onMounted, ref } from 'vue'
 
 const ajax = new CustomFetch({
   baseURL: '/api',

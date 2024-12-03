@@ -1,8 +1,8 @@
-import { hash } from 'ohash'
 import type { NitroFetchRequest } from 'nitropack'
 import type { AsyncData, AsyncDataOptions, AsyncDataRequestStatus, NuxtError } from 'nuxt/app'
-import type { FetchMethod, HTTPConfig, Interceptors, KeysOf, OnRequestErrorType, OnRequestType, OnResponseErrorType, OnResponseType, PickFrom } from './type'
-import { type MaybeRef, type Ref, createError, reactive, ref, toValue, unref, useAsyncData, useNuxtApp } from '#imports'
+import type { FetchContext, FetchMethod, FetchResponse, HTTPConfig, Interceptors, KeysOf, PickFrom } from './type'
+import { createError, type MaybeRef, reactive, type Ref, ref, toValue, unref, useAsyncData, useNuxtApp } from '#imports'
+import { hash } from 'ohash'
 
 type CustomFetchReturnValue<DataT, ErrorT> = AsyncData<PickFrom<DataT, KeysOf<DataT>> | null, (ErrorT extends Error | NuxtError<unknown> ? ErrorT : NuxtError<ErrorT>) | null>
 
@@ -83,7 +83,7 @@ export class CustomFetch {
 
     const { onRequest, onRequestError, onResponse, onResponseError, offline, handler, useHandler, immutableKey, ...restAjaxConfig } = config
 
-    if (process.client && navigator && !navigator.onLine) {
+    if (import.meta.client && navigator && !navigator.onLine) {
       if (offline) {
         offline()
       }
@@ -93,31 +93,54 @@ export class CustomFetch {
     const _config = reactive({ ...restAjaxConfig })
 
     const defaultOptions = {
-      onRequest (ctx: OnRequestType) {
-        [interceptors.onRequest, onRequest].forEach(fn => fn?.(ctx))
+      onRequest (ctx: FetchContext) {
+        [interceptors.onRequest, onRequest].forEach((fns) => {
+          if (Array.isArray(fns)) {
+            fns.forEach(fn => fn?.(ctx))
+          }
+          else {
+            fns?.(ctx)
+          }
+        })
       },
-      onRequestError (ctx: OnRequestErrorType) {
-        [interceptors.onRequestError, onRequestError].forEach(fn => fn?.(ctx))
+      onRequestError (ctx: FetchContext & { error: Error }) {
+        [interceptors.onRequestError, onRequestError].forEach((fns) => {
+          if (Array.isArray(fns)) {
+            fns.forEach(fn => fn?.(ctx))
+          }
+          else {
+            fns?.(ctx)
+          }
+        })
 
         throw createError({
-          statusCode: ctx.error.statusCode,
+          statusCode: 400,
           statusMessage: ctx.error.message,
           message: ctx.error.message,
           fatal: true
         })
       },
-      onResponse (ctx: OnResponseType) {
-        if (interceptors.onResponse) {
-          interceptors.onResponse(ctx)
-        }
-        if (onResponse) {
-          onResponse(ctx)
-        }
+      onResponse (ctx: FetchContext & { response: FetchResponse<any> }) {
+        [interceptors.onResponse, onResponse].forEach((fns) => {
+          if (Array.isArray(fns)) {
+            fns.forEach(fn => fn?.(ctx))
+          }
+          else {
+            fns?.(ctx)
+          }
+        })
       },
-      onResponseError (ctx: OnResponseErrorType) {
-        [interceptors.onResponseError, onResponseError].forEach(fn => fn?.(ctx))
+      onResponseError (ctx: FetchContext & { response: FetchResponse<any> }) {
+        [interceptors.onResponseError, onResponseError].forEach((fns) => {
+          if (Array.isArray(fns)) {
+            fns.forEach(fn => fn?.(ctx))
+          }
+          else {
+            fns?.(ctx)
+          }
+        })
         throw createError({
-          statusCode: ctx.response.status,
+          statusCode: 500,
           statusMessage: ctx.request.toString(),
           message: ctx.response._data,
           fatal: true
