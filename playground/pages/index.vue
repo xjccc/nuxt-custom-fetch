@@ -18,8 +18,9 @@
 </template>
 
 <script setup lang="ts">
+import type { ArticleInfo } from '../api/ajax'
 import { nextTick, onMounted, ref } from 'vue'
-import { type ArticleInfo, getArticleListData } from '../api/ajax'
+import { getArticleListData } from '../api/ajax'
 // const { data, error, pending } = await getInfo<{ip: string}>({
 //   sign: 123,
 //   sign_time: 'aaa'

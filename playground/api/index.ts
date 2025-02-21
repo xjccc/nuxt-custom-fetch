@@ -1,4 +1,5 @@
-import { CustomFetch, type Ref } from '#imports'
+import type { Ref } from '#imports'
+import { CustomFetch } from '#imports'
 
 const ajax = new CustomFetch({ baseURL: '/api' })
 

@@ -1,7 +1,8 @@
+import type { MaybeRef, Ref } from '#imports'
 import type { NitroFetchRequest } from 'nitropack'
 import type { AsyncData, AsyncDataOptions, AsyncDataRequestStatus, NuxtError } from 'nuxt/app'
 import type { FetchContext, FetchMethod, FetchResponse, HTTPConfig, Interceptors, KeysOf, PickFrom } from './type'
-import { createError, type MaybeRef, reactive, type Ref, ref, toValue, unref, useAsyncData, useNuxtApp } from '#imports'
+import { createError, reactive, ref, toValue, unref, useAsyncData, useNuxtApp } from '#imports'
 import { hash } from 'ohash'
 
 type CustomFetchReturnValue<DataT, ErrorT> = AsyncData<PickFrom<DataT, KeysOf<DataT>> | null, (ErrorT extends Error | NuxtError<unknown> ? ErrorT : NuxtError<ErrorT>) | null>
