@@ -1,5 +1,22 @@
 # nuxt-custom-fetch
 
+## v2.1.4
+
+[compare changes](https://github.com/xjccc/nuxt-custom-fetch/compare/v2.1.2...v2.1.4)
+
+### 📦 Build
+
+- V2.1.2 ([8eabc5c](https://github.com/xjccc/nuxt-custom-fetch/commit/8eabc5c))
+
+### 🏡 Chore
+
+- **release:** V2.1.3 ([fb27560](https://github.com/xjccc/nuxt-custom-fetch/commit/fb27560))
+- Changelog ([0bd5a5a](https://github.com/xjccc/nuxt-custom-fetch/commit/0bd5a5a))
+
+### ❤️ Contributors
+
+- Xjccc ([@xjccc](http://github.com/xjccc))
+
 ## v2.1.3
 
 [compare changes](https://github.com/xjccc/nuxt-custom-fetch/compare/v2.1.2...v2.1.3)
