@@ -52,8 +52,9 @@
     "eslint": "^9.21.0",
     "husky": "^9.1.7",
     "lint-staged": "^15.4.3",
+    "nitro": "npm:nitropack",
     "nuxt": "^3.15.4",
-    "typescript": "^5.8.2"
+    "typescript": "5.7.3"
   },
   "husky": {
     "hooks": {

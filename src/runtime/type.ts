@@ -29,6 +29,7 @@ export type FetchMethod =
 export interface HTTPConfig extends Omit<FetchOptions, 'method'> {
   key?: string
   immutableKey?: boolean
+  showLogs?: boolean
   interceptors?: Interceptors
   baseURL?: string
   useHandler?: boolean

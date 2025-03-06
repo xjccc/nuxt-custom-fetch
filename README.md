@@ -58,6 +58,7 @@ ajax.http({
 export declare class CustomFetch {
   baseURL: any
   immutableKey: boolean
+  showLogs: boolean
   params: HTTPConfig
   baseHandler: HTTPConfig['handler']
   interceptors: Interceptors
