@@ -1,5 +1,17 @@
 # nuxt-custom-fetch
 
+## v2.2.0
+
+[compare changes](https://github.com/xjccc/nuxt-custom-fetch/compare/v2.1.4...v2.2.0)
+
+### 🚀 Enhancements
+
+- Request logs ([#75](https://github.com/xjccc/nuxt-custom-fetch/pull/75))
+
+### ❤️ Contributors
+
+- Xjccc ([@xjccc](https://github.com/xjccc))
+
 ## v2.1.4
 
 [compare changes](https://github.com/xjccc/nuxt-custom-fetch/compare/v2.1.2...v2.1.4)
