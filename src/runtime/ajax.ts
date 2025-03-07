@@ -102,7 +102,7 @@ export class CustomFetch {
     const _config = reactive({ ...restAjaxConfig })
 
     const defaultOptions = {
-      onRequest: (ctx: FetchContext) => {
+      onRequest (ctx: FetchContext) {
         [interceptors.onRequest, onRequest].forEach((fns) => {
           if (Array.isArray(fns)) {
             fns.forEach(fn => fn?.(ctx))
