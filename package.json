@@ -36,25 +36,25 @@
     }
   },
   "dependencies": {
-    "@nuxt/kit": "^3.15.4",
+    "@nuxt/kit": "^3.16.0",
     "ohash": "^2.0.11"
   },
   "devDependencies": {
-    "@antfu/eslint-config": "^4.4.0",
-    "@commitlint/cli": "^19.7.1",
-    "@commitlint/config-conventional": "^19.7.1",
+    "@antfu/eslint-config": "^4.8.1",
+    "@commitlint/cli": "^19.8.0",
+    "@commitlint/config-conventional": "^19.8.0",
     "@nuxt/module-builder": "^0.8.4",
-    "@nuxt/schema": "^3.15.4",
-    "@types/node": "^22.13.9",
+    "@nuxt/schema": "^3.16.0",
+    "@types/node": "^22.13.10",
     "changelogen": "^0.6.1",
     "commitizen": "^4.3.1",
     "cz-git": "^1.11.1",
-    "eslint": "^9.21.0",
+    "eslint": "^9.22.0",
     "husky": "^9.1.7",
     "lint-staged": "^15.4.3",
     "nitro": "npm:nitropack",
-    "nuxt": "^3.15.4",
-    "typescript": "5.7.3"
+    "nuxt": "^3.16.0",
+    "typescript": "5.8.2"
   },
   "husky": {
     "hooks": {
