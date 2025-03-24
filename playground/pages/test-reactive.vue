@@ -7,10 +7,7 @@
       点击加载
     </button>
     <button
-      @click="async () => {
-        _refresh()
-        console.log('重置')
-      }"
+      @click="refresh"
     >
       重置
     </button>
@@ -24,20 +21,22 @@ import * as API from '../api'
 const page = ref(1)
 const list = ref<number[]>([])
 const num = ref<number>()
-let _refresh = () => {}
-const getList = async () => {
-  const { data, refresh, pending, error, status } = await API.getListReactive(page)
-  watch(() => data.value, () => {
-    if (page.value === 1) {
-      list.value = data.value?.data || []
-    }
-    else {
-      list.value = list.value.concat(data.value?.data || [])
-    }
-  })
-  _refresh = refresh
-  console.log(data.value, pending.value, error.value, status.value, 'data =====>')
-}
+const { data, refresh, pending, error, status } = await API.getListReactive(page)
+
+watch(() => data.value, async () => {
+  await nextTick()
+  console.log(data.value)
+
+  if (page.value === 1) {
+    list.value = data.value?.data || []
+  }
+  else {
+    list.value = list.value.concat(data.value?.data || [])
+  }
+}, {
+  immediate: true
+})
+console.log(data.value, pending.value, error.value, status.value, 'data =====>')
 
 const getNum = async () => {
   const { data, refresh, pending, error, status } = await API.getNum(page.value)
@@ -48,7 +47,6 @@ const getNum = async () => {
   }
 }
 
-await getList()
 await getNum()
 
 onMounted(async () => {
