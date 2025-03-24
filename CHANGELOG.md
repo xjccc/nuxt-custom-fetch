@@ -1,5 +1,17 @@
 # nuxt-custom-fetch
 
+## v2.3.0
+
+[compare changes](https://github.com/xjccc/nuxt-custom-fetch/compare/v2.2.0...v2.3.0)
+
+### 🚀 Enhancements
+
+- Add client side watch ([#80](https://github.com/xjccc/nuxt-custom-fetch/pull/80))
+
+### ❤️ Contributors
+
+- Xjccc ([@xjccc](https://github.com/xjccc))
+
 ## v2.2.0
 
 [compare changes](https://github.com/xjccc/nuxt-custom-fetch/compare/v2.1.4...v2.2.0)
