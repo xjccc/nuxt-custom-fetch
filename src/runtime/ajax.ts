@@ -2,7 +2,7 @@ import type { MaybeRef, Ref } from '#imports'
 import type { NitroFetchRequest } from 'nitro'
 import type { AsyncData, AsyncDataOptions, AsyncDataRequestStatus, NuxtError } from 'nuxt/app'
 import type { FetchContext, FetchMethod, FetchResponse, HTTPConfig, Interceptors, KeysOf, PickFrom } from './type'
-import { createError, reactive, ref, toValue, unref, useAsyncData, useNuxtApp } from '#imports'
+import { createError, getCurrentScope, onScopeDispose, reactive, ref, toValue, unref, useAsyncData, useNuxtApp, useRequestFetch, watch } from '#imports'
 import { hash, serialize } from 'ohash'
 
 type CustomFetchReturnValue<DataT, ErrorT> = AsyncData<PickFrom<DataT, KeysOf<DataT>> | null, (ErrorT extends Error | NuxtError<unknown> ? ErrorT : NuxtError<ErrorT>) | null>
@@ -171,7 +171,7 @@ export class CustomFetch {
         _cachedController.get(key)?.abort?.()
       }
 
-      return $fetch(url as string, {
+      return useRequestFetch()(url as string, {
         signal: _cachedController.get(key)?.signal,
         ...defaultOptions,
         ..._config
@@ -192,6 +192,8 @@ export class CustomFetch {
         pending: Ref<boolean>
         error: Ref<(ErrorT extends Error | NuxtError<unknown> ? ErrorT : NuxtError<ErrorT>) | null>
         status: Ref<AsyncDataRequestStatus>
+        refresh?: () => Promise<DataT>
+        execute?: () => Promise<DataT>
       } = {
         data: ref(null),
         pending: ref(true),
@@ -235,6 +237,18 @@ export class CustomFetch {
           asyncData.pending.value = false
           _cachedController.delete(key)
         })
+
+      asyncData.refresh = asyncData.execute = () => _handler().then(result => asyncData.data.value = result)
+      const hasScope = getCurrentScope()
+      if (options.watch) {
+        const unsub = watch(options.watch, async () => {
+          asyncData.refresh!()
+        })
+        if (hasScope) {
+          onScopeDispose(unsub)
+        }
+      }
+
       return promise as any
     }
 
