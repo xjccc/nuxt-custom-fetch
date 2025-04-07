@@ -88,9 +88,16 @@ export class CustomFetch {
     Object.assign(config, this.baseConfig(config))
     const generateOptionSegmentsWithConfig = generateOptionSegments(config)
     if (this.showLogs && import.meta.client) {
-      console.warn('[Custom Fetch] \`Request:\`', url, ' \`Query:\`', serialize(generateOptionSegmentsWithConfig), ' \`Body:\`', serialize(config.body))
+      let bodyLogs
+      try {
+        bodyLogs = serialize(config.body)
+      }
+      catch (error) {
+        console.warn('[Custom Fetch] couldn\'t serialize \`Body:\`', error)
+      }
+      console.warn('[Custom Fetch] \`Request:\`', url, ' \`Query:\`', serialize(generateOptionSegmentsWithConfig), ' \`Body:\`', bodyLogs)
     }
-    const { onRequest, onRequestError, onResponse, onResponseError, offline, handler, useHandler, immutableKey, ...restAjaxConfig } = config
+    const { onRequest, onRequestError, onResponse, onResponseError, offline, handler, useHandler, showLogs, immutableKey, ...restAjaxConfig } = config
 
     if (import.meta.client && navigator && !navigator.onLine) {
       if (offline) {
