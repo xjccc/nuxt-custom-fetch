@@ -21,7 +21,7 @@
 import type { ArticleInfo } from '../api/ajax'
 import { nextTick, onMounted, ref } from 'vue'
 import { getArticleListData } from '../api/ajax'
-// const { data, error, pending } = await getInfo<{ip: string}>({
+// const { data, error} = await getInfo<{ip: string}>({
 //   sign: 123,
 //   sign_time: 'aaa'
 // })

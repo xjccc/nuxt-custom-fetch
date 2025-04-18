@@ -26,7 +26,7 @@ const list = ref<number[]>([])
 const num = ref<number>()
 let _refresh = () => {}
 const getList = async () => {
-  const { data, refresh, pending, error, status } = await API.getList(page.value)
+  const { data, refresh, error, status } = await API.getList(page.value)
 
   if (page.value === 1) {
     list.value = data.value?.data || []
@@ -35,11 +35,11 @@ const getList = async () => {
     list.value = list.value.concat(data.value?.data || [])
   }
   _refresh = refresh
-  console.log(data.value, pending.value, error.value, status.value, 'data =====>')
+  console.log(data.value, error.value, status.value, 'data =====>')
 }
 
 const getNum = async () => {
-  const { data, refresh, pending, error, status } = await API.getNum(page.value)
+  const { data, refresh, error, status } = await API.getNum(page.value)
   // const { data, refresh } = await useFetch('/api/get-list', {
   //   params: {
   //     page: page.value
@@ -47,7 +47,7 @@ const getNum = async () => {
   // })
   if (data.value) {
     num.value = data.value.nums
-    console.log(data.value, refresh, pending.value, error.value, status.value, 'nums =====>')
+    console.log(data.value, refresh, error.value, status.value, 'nums =====>')
   }
 }
 

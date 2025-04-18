@@ -21,7 +21,7 @@ import * as API from '../api'
 const page = ref(1)
 const list = ref<number[]>([])
 const num = ref<number>()
-const { data, refresh, pending, error, status } = await API.getListReactive(page)
+const { data, refresh, error, status } = await API.getListReactive(page)
 
 watch(() => data.value, async () => {
   await nextTick()
@@ -36,14 +36,14 @@ watch(() => data.value, async () => {
 }, {
   immediate: true
 })
-console.log(data.value, pending.value, error.value, status.value, 'data =====>')
+console.log(data.value, error.value, status.value, 'data =====>')
 
 const getNum = async () => {
-  const { data, refresh, pending, error, status } = await API.getNum(page.value)
+  const { data, refresh, error, status } = await API.getNum(page.value)
 
   if (data.value) {
     num.value = data.value.nums
-    console.log(data.value, refresh, pending.value, error.value, status.value, 'nums =====>')
+    console.log(data.value, refresh, error.value, status.value, 'nums =====>')
   }
 }
 

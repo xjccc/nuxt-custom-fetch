@@ -1,22 +1,20 @@
 # Nuxt Module
 
-简单封装 useAsyncData
+simple wrapper useAsyncData
 
-`version > 3.0.0`
+`version >= 3.17.0`
 
-## 注意
+## Attention
 
-请求的使用形式，类似于之前的`ajax`，修改参数后，重新调用封装方法。
+1. Invalid request in onMounted
 
-1. 在 onMounted 中请求无效（version > 3.0.0）
+- Execute in `nextTick`, or set `{server: false}` to watch `status` changes
 
-- 在下一个 nextTick 中执行，或者设置{server: false}，watch pending 变化
+2. When using `refresh` and `execute`, it should also be noted that the parameters are not responsive, so they will always be the parameters requested for the first time
 
-2. `refresh`和`execute`使用上也需要注意，参数不是响应式的，所以会一直是第一次请求的参数
+3. If a reactive object is passed and using `watch`, it will automatically re request
 
-3. 如果传入响应式对象，使用`watch`监听，会自动重新请求
-
-## 安装
+## Install
 
 ```bash
 pnpm add nuxt-custom-fetch
@@ -29,9 +27,9 @@ export default defineNuxtConfig({
 })
 ```
 
-## 使用
+## Usage
 
-实例化全局 CustomFetch
+global CustomFetch
 
 ```ts
 const ajax = new CustomFetch({
@@ -48,7 +46,7 @@ ajax.http({
 })
 ```
 
-## 类型
+## Types
 
 ### useAsyncDataType
 
@@ -59,21 +57,19 @@ export declare class CustomFetch {
   baseURL: any
   immutableKey: boolean
   showLogs: boolean
-  params: HTTPConfig
-  baseHandler: HTTPConfig['handler']
-  interceptors: Interceptors
+  baseHandler: CustomFetchOptions['handler']
   offline: typeof Noop
-  constructor (config?: HTTPConfig)
+  constructor (config?: CustomFetchOptions)
   private baseConfig
-  http<DataT, ErrorT = Error | null>(url: NitroFetchRequest, config: HTTPConfig & {
+  http<DataT, ErrorT = Error | null>(url: NitroFetchRequest, config: CustomFetchOptions & {
     method: FetchMethod
   }, options?: AsyncDataOptions<DataT>): CustomFetchReturnValue<DataT, ErrorT>
-  get<DataT, ErrorT = Error | null>(url: NitroFetchRequest, config?: HTTPConfig, options?: AsyncDataOptions<DataT>): CustomFetchReturnValue<DataT, ErrorT>
-  post<DataT, ErrorT = Error | null>(url: NitroFetchRequest, config?: HTTPConfig, options?: AsyncDataOptions<DataT>): CustomFetchReturnValue<DataT, ErrorT>
+  get<DataT, ErrorT = Error | null>(url: NitroFetchRequest, config?: CustomFetchOptions, options?: AsyncDataOptions<DataT>): CustomFetchReturnValue<DataT, ErrorT>
+  post<DataT, ErrorT = Error | null>(url: NitroFetchRequest, config?: CustomFetchOptions, options?: AsyncDataOptions<DataT>): CustomFetchReturnValue<DataT, ErrorT>
 }
 
 export type FetchMethod = 'options' | 'GET' | 'POST' | 'get' | 'HEAD' | 'PATCH' | 'PUT' | 'DELETE' | 'CONNECT' | 'OPTIONS' | 'TRACE' | 'post' | 'head' | 'patch' | 'put' | 'delete' | 'connect' | 'trace' | undefined
-export interface HTTPConfig extends Omit<FetchOptions, 'method'> {
+export interface CustomFetchOptions extends Omit<FetchOptions, 'method'> {
   key?: string
   immutableKey?: boolean
   baseURL?: string
@@ -89,7 +85,7 @@ export interface Interceptors {
 }
 ```
 
-## 示例
+## Example
 
 ```ts
 // api.ts
@@ -100,7 +96,7 @@ export const getInfo = (params: Record<string, any>) =>
 ```ts
 // index.vue
 import { getInfo } from './ajax'
-const { data, error, pending } = await getInfo({
+const { data, error } = await getInfo({
   sign: 123
 })
 console.log(data.value)
