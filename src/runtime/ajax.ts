@@ -2,7 +2,6 @@ import type { Ref } from '#imports'
 import type { NitroFetchRequest } from 'nitro/types'
 import type { AsyncData, AsyncDataOptions, AsyncDataRequestStatus, NuxtError } from 'nuxt/app'
 import type { CustomFetchOptions, FetchContext, FetchMethod, FetchResponse, Interceptors, KeysOf, PickFrom } from './type'
-// @ts-expect-error virtual file
 import { asyncDataDefaults } from '#build/nuxt.config.mjs'
 import { createError, getCurrentScope, onScopeDispose, reactive, ref, unref, useAsyncData, useRequestFetch, useRuntimeConfig, watch } from '#imports'
 import { hash, serialize } from 'ohash'
@@ -78,8 +77,7 @@ export class CustomFetch {
     const { onRequest, onRequestError, onResponse, onResponseError, offline, handler, useHandler, showLogs, immutableKey, ...asyncDataOptions } = config
 
     if (import.meta.client && navigator && !navigator.onLine) {
-      const fn = offline || this.offline
-      fn()
+      this.offline()
     }
 
     const interceptors = this._interceptors

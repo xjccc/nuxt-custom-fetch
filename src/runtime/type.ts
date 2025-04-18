@@ -28,12 +28,18 @@ export type FetchMethod =
   | undefined
 
 export interface CustomFetchOptions extends Omit<FetchOptions, 'method'> {
+  /** unique key for fetch */
   key?: string
+  /** hash key for fetch, with [customFetch: + url] without query */
   immutableKey?: boolean
+  /** show logs */
   showLogs?: boolean
   baseURL?: string
+  /** is use handler to deal with query or pramas */
   useHandler?: boolean
-  handler?: (params: Record<string, any>) => Record<string, any>
+  /** handler to deal with query or pramas */
+  handler?: (mergedObject: FetchOptions['params'] & FetchOptions['query']) => Record<string, any>
+  /** offline handler */
   offline?: () => void
 }
 
