@@ -178,6 +178,13 @@ export class CustomFetch {
 
     const nuxtApp = useNuxtApp()
     if (import.meta.client && !nuxtApp.isHydrating) {
+      // If server instance is exist, at client use same
+      if (nuxtApp._asyncData[key]) {
+        return nuxtApp._asyncData[key]!.execute({
+          cause: 'initial',
+          dedupe: options.dedupe
+        }) as any
+      }
       /**
        * WRAN: At client its only for compat data. The behavior is not same as useAsyncData
        * And client not has cachedData
