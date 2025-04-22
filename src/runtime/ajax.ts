@@ -4,7 +4,7 @@ import type { AsyncData, AsyncDataOptions, AsyncDataRequestStatus, NuxtError } f
 import type { CustomFetchOptions, FetchContext, FetchMethod, FetchResponse, Interceptors, KeysOf, PickFrom } from './type'
 // @ts-expect-error virtual file
 import { asyncDataDefaults, pendingWhenIdle } from '#build/nuxt.config.mjs'
-import { clearNuxtData, createError, getCurrentScope, onScopeDispose, reactive, ref, shallowRef, unref, useAsyncData, useRequestFetch, useRuntimeConfig, watch } from '#imports'
+import { clearNuxtData, createError, getCurrentScope, onScopeDispose, reactive, ref, shallowRef, unref, useAsyncData, useNuxtApp, useRequestFetch, useRuntimeConfig, watch } from '#imports'
 import { hash, serialize } from 'ohash'
 import { generateOptionSegments, Noop, pick } from './utils'
 
@@ -176,7 +176,8 @@ export class CustomFetch {
 
     const controller = typeof AbortController !== 'undefined' ? new AbortController() : ({} as AbortController)
 
-    if (import.meta.client) {
+    const nuxtApp = useNuxtApp()
+    if (import.meta.client && !nuxtApp.isHydrating) {
       /**
        * WRAN: At client its only for compat data. The behavior is not same as useAsyncData
        * And client not has cachedData
