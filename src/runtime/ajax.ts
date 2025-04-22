@@ -180,10 +180,11 @@ export class CustomFetch {
     if (import.meta.client && !nuxtApp.isHydrating) {
       // If server instance is exist, at client use same
       if (nuxtApp._asyncData[key]) {
-        return nuxtApp._asyncData[key]!.execute({
+        nuxtApp._asyncData[key]!.execute({
           cause: 'initial',
           dedupe: options.dedupe
-        }) as any
+        })
+        return nuxtApp._asyncData[key] as any
       }
       /**
        * WRAN: At client its only for compat data. The behavior is not same as useAsyncData
