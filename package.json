@@ -2,6 +2,7 @@
   "name": "nuxt-custom-fetch",
   "type": "module",
   "version": "2.3.1",
+  "packageManager": "pnpm@8.15.3+sha1.64838798f519c18029c1e8a1310e16101fc2eda0",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -35,15 +36,15 @@
     }
   },
   "dependencies": {
-    "@nuxt/kit": "npm:@nuxt/kit-nightly@latest",
     "ohash": "^2.0.11"
   },
   "devDependencies": {
     "@antfu/eslint-config": "^4.12.0",
     "@commitlint/cli": "^19.8.0",
     "@commitlint/config-conventional": "^19.8.0",
+    "@nuxt/kit": "npm:@nuxt/kit-nightly@4.0.0-29086370.088bcd45",
     "@nuxt/module-builder": "^1.0.1",
-    "@nuxt/schema": "npm:@nuxt/schema-nightly@latest",
+    "@nuxt/schema": "npm:@nuxt/schema-nightly@4.0.0-29086370.088bcd45",
     "@types/node": "^22.14.1",
     "changelogen": "^0.6.1",
     "commitizen": "^4.3.1",
@@ -52,7 +53,7 @@
     "husky": "^9.1.7",
     "lint-staged": "^15.5.1",
     "nitro": "npm:nitro-nightly@latest",
-    "nuxt": "npm:nuxt-nightly@latest",
+    "nuxt": "npm:nuxt-nightly@4.0.0-29086370.088bcd45",
     "typescript": "5.8.3"
   },
   "husky": {
