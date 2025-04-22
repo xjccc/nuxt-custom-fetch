@@ -2,11 +2,24 @@ import type { Ref } from '#imports'
 import type { NitroFetchRequest } from 'nitro/types'
 import type { AsyncData, AsyncDataOptions, AsyncDataRequestStatus, NuxtError } from 'nuxt/app'
 import type { CustomFetchOptions, FetchContext, FetchMethod, FetchResponse, Interceptors, KeysOf, PickFrom } from './type'
-import { createError, getCurrentScope, onScopeDispose, reactive, ref, unref, useAsyncData, useRequestFetch, useRuntimeConfig, watch } from '#imports'
+// @ts-expect-error virtual file
+import { asyncDataDefaults, pendingWhenIdle } from '#build/nuxt.config.mjs'
+import { clearNuxtData, createError, getCurrentScope, onScopeDispose, reactive, ref, shallowRef, unref, useAsyncData, useRequestFetch, useRuntimeConfig, watch } from '#imports'
 import { hash, serialize } from 'ohash'
 import { generateOptionSegments, Noop, pick } from './utils'
 
 type CustomFetchReturnValue<DataT, NuxtErrorDataT> = AsyncData<PickFrom<DataT, KeysOf<DataT>> | undefined, (NuxtErrorDataT extends Error | NuxtError<unknown> ? NuxtErrorDataT : NuxtError<NuxtErrorDataT>) | undefined>
+type AsyncDataRefreshCause = 'initial' | 'refresh:hook' | 'refresh:manual' | 'watch'
+interface AsyncDataExecuteOptions {
+  /**
+   * Force a refresh, even if there is already a pending request. Previous requests will
+   * not be cancelled, but their result will not affect the data/pending state - and any
+   * previously awaited promises will not resolve until this new request resolves.
+   */
+  dedupe?: 'cancel' | 'defer'
+
+  cause?: AsyncDataRefreshCause
+}
 
 const _cachedController = new Map<string, AbortController>()
 
@@ -164,18 +177,29 @@ export class CustomFetch {
     const controller = typeof AbortController !== 'undefined' ? new AbortController() : ({} as AbortController)
 
     if (import.meta.client) {
+      /**
+       * WRAN: At client its only for compat data. The behavior is not same as useAsyncData
+       * And client not has cachedData
+       */
+      const _ref = options.deep ? ref : shallowRef
       const asyncData: {
         data: Ref<any>
         error: Ref<(NuxtErrorDataT extends Error | NuxtError<unknown> ? NuxtErrorDataT : NuxtError<NuxtErrorDataT>) | null>
+        pending: Ref<boolean>
         status: Ref<AsyncDataRequestStatus>
-        refresh?: () => Promise<DataT>
-        execute?: () => Promise<DataT>
+        refresh?: (opts?: AsyncDataExecuteOptions) => Promise<DataT | void>
+        execute?: (opts?: AsyncDataExecuteOptions) => Promise<DataT | void>
+        clear: () => void
       } = {
-        data: ref(null),
-        error: ref(null),
-        status: ref('idle')
+        data: _ref(null),
+        error: _ref(null),
+        status: _ref('idle'),
+        pending: _ref(false),
+        clear: () => clearNuxtData(key)
       }
-
+      if (pendingWhenIdle) {
+        asyncData.pending.value = true
+      }
       asyncData.status.value = 'pending'
       const promise = new Promise<DataT>((resolve, reject) => {
         try {
@@ -197,7 +221,7 @@ export class CustomFetch {
           }
 
           asyncData.data.value = result
-          asyncData.error.value = null
+          asyncData.error.value = asyncDataDefaults.errorValue
           asyncData.status.value = 'success'
           return asyncData
         })
@@ -208,15 +232,19 @@ export class CustomFetch {
           return asyncData
         })
         .finally(() => {
+          if (pendingWhenIdle) {
+            asyncData.pending.value = false
+          }
           _cachedController.delete(key)
         })
 
       asyncData.refresh = asyncData.execute = () => _handler().then(result => asyncData.data.value = result)
+
       const hasScope = getCurrentScope()
       if (options.watch) {
         const unsub = watch(options.watch, async () => {
           asyncData.refresh!()
-        })
+        }, { flush: 'post' })
         if (hasScope) {
           onScopeDispose(unsub)
         }
