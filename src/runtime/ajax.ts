@@ -182,6 +182,9 @@ export class CustomFetch {
        * And client not has cachedData
        */
       const _ref = options.deep ? ref : shallowRef
+
+      options.default ??= () => asyncDataDefaults.value
+
       const asyncData: {
         data: Ref<any>
         error: Ref<(NuxtErrorDataT extends Error | NuxtError<unknown> ? NuxtErrorDataT : NuxtError<NuxtErrorDataT>) | null>
@@ -227,7 +230,7 @@ export class CustomFetch {
         })
         .catch((error: any) => {
           asyncData.error.value = createError(error) as any
-          asyncData.data.value = unref(options?.default!())
+          asyncData.data.value = unref(options.default!())
           asyncData.status.value = 'error'
           return asyncData
         })
