@@ -18,8 +18,8 @@
 </template>
 
 <script setup lang="ts">
-import * as API from '@/api'
 import { nextTick, onMounted, ref } from 'vue'
+import * as API from '../../api'
 
 const page = ref(1)
 const list = ref<number[]>([])

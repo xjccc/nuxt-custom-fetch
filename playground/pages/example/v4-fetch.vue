@@ -13,12 +13,20 @@ import { nextTick, onMounted, ref, watch } from 'vue'
 
 const exampleRef = ref('')
 const getExample = async () => {
+  // data is the same as Test setup call
   const { data } = await exampleApi({})
   if (!data.value) {
     return
   }
+  // exampleRef is not same
   exampleRef.value = data.value
   watch(
+    /**
+     * You will see logs in browser console
+     * 2s log exampleRef value is 221
+     * 3s log exampleRef value is 235
+     * because data is the same ref
+     */
     () => data.value,
     (newVal) => {
       exampleRef.value = newVal || ''
@@ -47,6 +55,16 @@ watch(
 )
 onMounted(async () => {
   await nextTick()
+  /**
+   * If getExample is called in setup
+   * This api will not called in network at client
+   * This will cached the same data
+   *
+   * If none used in setup
+   * This will be called in network at client
+   * And this api use $fetch to fetch data
+   * Its compat with useAsyncData, and not same as useAsyncData, like refresh\execute
+   */
   getExample2()
   setTimeout(() => {
     exampleRef.value = '235'
