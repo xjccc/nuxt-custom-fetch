@@ -3,6 +3,11 @@ import { CustomFetch } from '#imports'
 
 const ajax = new CustomFetch({ baseURL: '/api' })
 
+export const exampleApi = (params: Record<string, unknown>) =>
+  ajax.get<string>('/hello', {
+    params
+  })
+
 export function getListReactive (page: Ref<number>) {
   return ajax.get<{
     data: number[]

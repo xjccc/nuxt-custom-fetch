@@ -70,7 +70,7 @@ export class CustomFetch {
     return { [_name]: { ...mergeObj } }
   }
 
-  http<DataT, NuxtErrorDataT = Error | null>(url: NitroFetchRequest, config: CustomFetchOptions & { method: FetchMethod }, options: AsyncDataOptions<DataT> = {}): CustomFetchReturnValue<DataT, NuxtErrorDataT> {
+  request<DataT, NuxtErrorDataT = Error | null>(url: NitroFetchRequest, config: CustomFetchOptions & { method: FetchMethod }, options: AsyncDataOptions<DataT> = {}): CustomFetchReturnValue<DataT, NuxtErrorDataT> {
     const app = useRuntimeConfig().app
     config.baseURL ??= this.baseURL || app.baseURL
     Object.assign(config, this.baseConfig(config))
@@ -269,14 +269,14 @@ export class CustomFetch {
   }
 
   get<DataT, NuxtErrorDataT = Error | null>(url: NitroFetchRequest, config: CustomFetchOptions = {}, options?: AsyncDataOptions<DataT>) {
-    return this.http<DataT, NuxtErrorDataT>(url, {
+    return this.request<DataT, NuxtErrorDataT>(url, {
       ...config,
       method: 'GET'
     }, options)
   }
 
   post<DataT, NuxtErrorDataT = Error | null>(url: NitroFetchRequest, config: CustomFetchOptions = {}, options?: AsyncDataOptions<DataT>) {
-    return this.http<DataT, NuxtErrorDataT>(url, {
+    return this.request<DataT, NuxtErrorDataT>(url, {
       ...config,
       method: 'POST'
     }, options)

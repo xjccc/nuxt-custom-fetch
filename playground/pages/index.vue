@@ -3,16 +3,20 @@
     主页
     {{ list?.totalpage }}
     <br>
-    <NuxtLink to="/test-reactive">
+    <NuxtLink to="/example/reactive">
       Test reactive
     </NuxtLink>
     <br>
-    <NuxtLink to="/test-duplicate">
+    <NuxtLink to="/example/duplicate">
       Test duplicate
     </NuxtLink>
     <br>
-    <NuxtLink to="/test-handler">
+    <NuxtLink to="/example/handler">
       Test handler
+    </NuxtLink>
+    <br>
+    <NuxtLink to="/example/v4-fetch">
+      Test V4
     </NuxtLink>
   </div>
 </template>

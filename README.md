@@ -4,6 +4,10 @@ simple wrapper useAsyncData
 
 `version >= 3.17.0`
 
+## Break Change
+
+1. `http` method is removed, use `request` instead
+
 ## Attention
 
 1. Invalid request in onMounted
@@ -36,13 +40,13 @@ const ajax = new CustomFetch({
   baseURL: ''
 })
 
-// `http|get|post`
+// `request|get|post`
 ajax.get('/api/user')
 
 ajax.post('/api/user')
 
-ajax.http({
-  method: 'GET'
+ajax.request({
+  method: 'DELETE'
 })
 ```
 
@@ -59,7 +63,7 @@ export declare class CustomFetch {
   offline: typeof Noop
   showLogs: boolean
   constructor (config: CustomFetchOptions)
-  http<DataT, NuxtErrorDataT = Error | null>(url: NitroFetchRequest, config: CustomFetchOptions & {
+  request<DataT, NuxtErrorDataT = Error | null>(url: NitroFetchRequest, config: CustomFetchOptions & {
     method: FetchMethod
   }, options?: AsyncDataOptions<DataT>): CustomFetchReturnValue<DataT, NuxtErrorDataT>
   get<DataT, NuxtErrorDataT = Error | null>(url: NitroFetchRequest, config?: CustomFetchOptions, options?: AsyncDataOptions<DataT>): CustomFetchReturnValue<DataT, NuxtErrorDataT>
