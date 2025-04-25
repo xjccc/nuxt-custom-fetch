@@ -1,4 +1,5 @@
 <template>
+  <input v-model="page" type="text">
   <div>
     <div v-for="item in list" :key="item">
       {{ item }}
