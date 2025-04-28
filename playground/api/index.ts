@@ -8,6 +8,18 @@ export const exampleApi = (params: Record<string, unknown>) =>
     params
   })
 
+export const exampleApi2 = (key: string | Ref<string>, {
+  userId = 1
+}) => {
+  return ajax.get<string>('/hello', {
+    key,
+    params: {
+      userId
+    }
+  }, {
+    default: () => 11
+  })
+}
 export function getListReactive (page: Ref<number>) {
   return ajax.get<{
     data: number[]

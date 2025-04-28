@@ -1,3 +1,6 @@
-import { defineEventHandler } from 'h3'
+import { defineEventHandler, getQuery } from 'h3'
 
-export default defineEventHandler(() => 'hello world')
+export default defineEventHandler(async (event) => {
+  const query = await getQuery(event)
+  return `hello world ${query.userId}`
+})

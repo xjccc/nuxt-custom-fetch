@@ -16,7 +16,11 @@
     </NuxtLink>
     <br>
     <NuxtLink to="/example/v4-fetch">
-      Test V4
+      Test V4 fetch
+    </NuxtLink>
+    <br>
+    <NuxtLink to="/example/v4-reactive-1">
+      Test V4 reactive 1
     </NuxtLink>
   </div>
 </template>
