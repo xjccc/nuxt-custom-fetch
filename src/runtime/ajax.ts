@@ -192,7 +192,7 @@ export class CustomFetch {
     const nuxtApp = useNuxtApp()
     if (import.meta.client && !nuxtApp.isHydrating) {
       // If server instance is exist, at client use same
-      if (nuxtApp._asyncData[key.value]) {
+      if (nuxtApp._asyncData[key.value]?._deps) {
         nuxtApp._asyncData[key.value]!.execute({
           cause: 'initial',
           dedupe: options.dedupe
