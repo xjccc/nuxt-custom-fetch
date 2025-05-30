@@ -11,8 +11,8 @@
 
 <script setup lang="ts">
 import { useRoute, useRouter } from '#imports'
-import { exampleApi2 } from '@/api'
 import { computed, ref } from 'vue'
+import { exampleApi2 } from '@/api'
 
 const route = useRoute()
 const router = useRouter()

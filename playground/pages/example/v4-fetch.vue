@@ -8,8 +8,8 @@
 </template>
 
 <script setup lang="ts">
-import { exampleApi } from '@/api'
 import { nextTick, onMounted, ref, watch } from 'vue'
+import { exampleApi } from '@/api'
 
 const exampleRef = ref('')
 const getExample = async () => {

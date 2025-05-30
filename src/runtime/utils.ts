@@ -46,7 +46,7 @@ export function generateOptionSegments<_ResT> (opts: CustomFetchOptions & { meth
         segments.push(hash(value))
       }
       catch {
-        console.warn('[useFetch] Failed to hash body', value)
+        console.warn('[Custom Fetch] Failed to hash body', value)
       }
     }
   }
