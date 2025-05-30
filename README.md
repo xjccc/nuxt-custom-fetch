@@ -2,7 +2,8 @@
 
 simple wrapper useAsyncData
 
-`version >= 3.17.0`
+`v4`: `version >= 3.17.0`
+`v2`: `version >= 3.0.0 < 3.17.0`
 
 ## Break Change
 
