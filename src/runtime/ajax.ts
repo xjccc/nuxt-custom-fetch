@@ -77,14 +77,24 @@ export class CustomFetch {
 
     const generateOptionSegmentsWithConfig = generateOptionSegments(config)
     if (this.showLogs && import.meta.client) {
+      const { body: _body, ...resetConfig } = config
+
       let bodyLogs
       try {
-        bodyLogs = serialize(config.body)
+        bodyLogs = serialize(_body)
       }
       catch (error) {
-        console.warn('[Custom Fetch] couldn\'t serialize `Body:`', error)
+        console.warn('[Custom Fetch] couldn\'t serialize [Body]:', error)
       }
-      console.warn('[Custom Fetch] `Request:`', url, '`Query:`', serialize(generateOptionSegmentsWithConfig), ' \`Body:\`', bodyLogs)
+      console.warn([
+        '———————————— [Custom Fetch] ————————————',
+        `[Request URL]: ${url}`,
+        '',
+        `[Query]: ${serialize(resetConfig)}`,
+        '',
+        `[Body]: ${bodyLogs}`,
+        '————————————————————————————————————'
+      ].join('\n'))
     }
     const { onRequest, onRequestError, onResponse, onResponseError, offline, handler, useHandler, showLogs, immutableKey, ...asyncDataOptions } = config
 
@@ -115,13 +125,6 @@ export class CustomFetch {
             fns?.(ctx)
           }
         })
-
-        throw createError({
-          statusCode: 400,
-          statusMessage: ctx.error.message,
-          message: ctx.error.message,
-          fatal: true
-        })
       },
       onResponse (ctx: FetchContext & { response: FetchResponse<any> }) {
         [interceptors.onResponse, onResponse].forEach((fns) => {
@@ -141,12 +144,6 @@ export class CustomFetch {
           else {
             fns?.(ctx)
           }
-        })
-        throw createError({
-          statusCode: 500,
-          statusMessage: ctx.request.toString(),
-          message: ctx.response._data,
-          fatal: true
         })
       }
     }
