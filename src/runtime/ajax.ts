@@ -206,15 +206,15 @@ export class CustomFetch {
 
       const asyncData: {
         data: Ref<any>
-        error: Ref<(NuxtErrorDataT extends Error | NuxtError<unknown> ? NuxtErrorDataT : NuxtError<NuxtErrorDataT>) | null>
+        error: Ref<(NuxtErrorDataT extends Error | NuxtError<unknown> ? NuxtErrorDataT : NuxtError<NuxtErrorDataT>) | undefined>
         pending: Ref<boolean>
         status: Ref<AsyncDataRequestStatus>
         refresh?: (opts?: AsyncDataExecuteOptions) => Promise<DataT | void>
         execute?: (opts?: AsyncDataExecuteOptions) => Promise<DataT | void>
         clear: () => void
       } = {
-        data: _ref(null),
-        error: _ref(null),
+        data: _ref(undefined),
+        error: _ref(undefined),
         status: _ref('idle'),
         pending: _ref(false),
         clear: () => clearNuxtData(key.value)
