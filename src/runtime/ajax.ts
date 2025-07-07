@@ -106,45 +106,37 @@ export class CustomFetch {
     const _config = reactive({ ...asyncDataOptions })
 
     const defaultOptions = {
-      onRequest (ctx: FetchContext) {
-        [interceptors.onRequest, onRequest].forEach((fns) => {
-          if (Array.isArray(fns)) {
-            fns.forEach(fn => fn?.(ctx))
+      async onRequest (ctx: FetchContext) {
+        const allFns = [interceptors.onRequest, onRequest].flat()
+        for (const fn of allFns) {
+          if (fn) {
+            await fn(ctx)
           }
-          else {
-            fns?.(ctx)
-          }
-        })
+        }
       },
-      onRequestError (ctx: FetchContext & { error: Error }) {
-        [interceptors.onRequestError, onRequestError].forEach((fns) => {
-          if (Array.isArray(fns)) {
-            fns.forEach(fn => fn?.(ctx))
+      async onRequestError (ctx: FetchContext & { error: Error }) {
+        const allFns = [interceptors.onRequestError, onRequestError].flat()
+        for (const fn of allFns) {
+          if (fn) {
+            await fn(ctx)
           }
-          else {
-            fns?.(ctx)
-          }
-        })
+        }
       },
-      onResponse (ctx: FetchContext & { response: FetchResponse<any> }) {
-        [interceptors.onResponse, onResponse].forEach((fns) => {
-          if (Array.isArray(fns)) {
-            fns.forEach(fn => fn?.(ctx))
+      async onResponse (ctx: FetchContext & { response: FetchResponse<any> }) {
+        const allFns = [interceptors.onResponse, onResponse].flat()
+        for (const fn of allFns) {
+          if (fn) {
+            await fn(ctx)
           }
-          else {
-            fns?.(ctx)
-          }
-        })
+        }
       },
-      onResponseError (ctx: FetchContext & { response: FetchResponse<any> }) {
-        [interceptors.onResponseError, onResponseError].forEach((fns) => {
-          if (Array.isArray(fns)) {
-            fns.forEach(fn => fn?.(ctx))
+      async onResponseError (ctx: FetchContext & { response: FetchResponse<any> }) {
+        const allFns = [interceptors.onResponseError, onResponseError].flat()
+        for (const fn of allFns) {
+          if (fn) {
+            await fn(ctx)
           }
-          else {
-            fns?.(ctx)
-          }
-        })
+        }
       }
     }
 

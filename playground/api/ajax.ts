@@ -6,6 +6,9 @@ const ajax = new CustomFetch({
   handler (params) {
     const obj = JSON.stringify(params)
     return { a: obj }
+  },
+  onResponse () {
+    return Promise.reject(new Error(`test fail`))
   }
 })
 

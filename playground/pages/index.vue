@@ -36,12 +36,13 @@ import { getArticleListData } from '../api/ajax'
 // console.log(data.value, process.server)
 const list = ref<Partial<ArticleInfo>>()
 const getApi = async () => {
-  const { data } = await getArticleListData({
+  const { data, error } = await getArticleListData({
     SubId: 66,
     SerId: 64,
     PageSize: 6
   })
 
+  console.error(error.value, 'error ======>')
   if (!data.value) {
     return
   }
