@@ -3,16 +3,24 @@
     主页
     {{ list?.totalpage }}
     <br>
-    <NuxtLink to="/test-reactive">
+    <NuxtLink to="/example/reactive">
       Test reactive
     </NuxtLink>
     <br>
-    <NuxtLink to="/test-duplicate">
+    <NuxtLink to="/example/duplicate">
       Test duplicate
     </NuxtLink>
     <br>
-    <NuxtLink to="/test-handler">
+    <NuxtLink to="/example/handler">
       Test handler
+    </NuxtLink>
+    <br>
+    <NuxtLink to="/example/v4-fetch">
+      Test V4 fetch
+    </NuxtLink>
+    <br>
+    <NuxtLink to="/example/v4-reactive-1">
+      Test V4 reactive 1
     </NuxtLink>
   </div>
 </template>
@@ -21,7 +29,7 @@
 import type { ArticleInfo } from '../api/ajax'
 import { nextTick, onMounted, ref } from 'vue'
 import { getArticleListData } from '../api/ajax'
-// const { data, error, pending } = await getInfo<{ip: string}>({
+// const { data, error} = await getInfo<{ip: string}>({
 //   sign: 123,
 //   sign_time: 'aaa'
 // })

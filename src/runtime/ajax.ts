@@ -1,37 +1,24 @@
-import type { MaybeRef, Ref } from '#imports'
-import type { NitroFetchRequest } from 'nitro'
+import type { Ref } from '#imports'
+import type { NitroFetchRequest } from 'nitro/types'
 import type { AsyncData, AsyncDataOptions, AsyncDataRequestStatus, NuxtError } from 'nuxt/app'
-import type { FetchContext, FetchMethod, FetchResponse, HTTPConfig, Interceptors, KeysOf, PickFrom } from './type'
-import { createError, getCurrentScope, onScopeDispose, reactive, ref, toValue, unref, useAsyncData, useNuxtApp, useRequestFetch, watch } from '#imports'
+import type { CustomFetchOptions, FetchContext, FetchMethod, FetchResponse, Interceptors, KeysOf, PickFrom } from './type'
+// @ts-expect-error virtual file
+import { asyncDataDefaults, pendingWhenIdle } from '#build/nuxt.config.mjs'
+import { clearNuxtData, computed, createError, getCurrentScope, onScopeDispose, reactive, ref, shallowRef, toValue, unref, useAsyncData, useNuxtApp, useRequestFetch, useRuntimeConfig, watch } from '#imports'
 import { hash, serialize } from 'ohash'
+import { generateOptionSegments, Noop, pick } from './utils'
 
-type CustomFetchReturnValue<DataT, ErrorT> = AsyncData<PickFrom<DataT, KeysOf<DataT>> | null, (ErrorT extends Error | NuxtError<unknown> ? ErrorT : NuxtError<ErrorT>) | null>
+type CustomFetchReturnValue<DataT, NuxtErrorDataT> = AsyncData<PickFrom<DataT, KeysOf<DataT>> | undefined, (NuxtErrorDataT extends Error | NuxtError<unknown> ? NuxtErrorDataT : NuxtError<NuxtErrorDataT>) | undefined>
+type AsyncDataRefreshCause = 'initial' | 'refresh:hook' | 'refresh:manual' | 'watch'
+interface AsyncDataExecuteOptions {
+  /**
+   * Force a refresh, even if there is already a pending request. Previous requests will
+   * not be cancelled, but their result will not affect the data/pending state - and any
+   * previously awaited promises will not resolve until this new request resolves.
+   */
+  dedupe?: 'cancel' | 'defer'
 
-function Noop () { }
-function generateOptionSegments (opts: HTTPConfig & { method: FetchMethod }) {
-  const segments: Array<string | undefined | Record<string, string>> = [toValue(opts.method as MaybeRef<string | undefined> | undefined)?.toUpperCase() || 'GET', toValue(opts.baseURL)]
-  for (const _obj of [opts.params || opts.query]) {
-    const obj = toValue(_obj)
-    if (!obj) {
-      continue
-    }
-
-    const unwrapped: Record<string, string> = {}
-    for (const [key, value] of Object.entries(obj)) {
-      unwrapped[toValue(key)] = toValue(value)
-    }
-
-    segments.push(unwrapped)
-  }
-  return segments
-}
-function pick (obj: Record<string, any>, keys: string[]) {
-  const newObj: any = {}
-  for (const key of keys) {
-    newObj[key] = obj[key]
-  }
-
-  return newObj
+  cause?: AsyncDataRefreshCause
 }
 
 const _cachedController = new Map<string, AbortController>()
@@ -39,28 +26,28 @@ const _cachedController = new Map<string, AbortController>()
 export class CustomFetch {
   baseURL
   immutableKey = false
-  params: HTTPConfig = {}
-  baseHandler: HTTPConfig['handler']
-  interceptors: Interceptors = {}
+  _config: CustomFetchOptions = {}
+  _baseHandler: CustomFetchOptions['handler']
+  _interceptors: Interceptors = {}
   offline = Noop
   showLogs = false
-
-  constructor (config: HTTPConfig = {
-    baseURL: ''
-  }) {
-    this.params = { ...config }
-    this.baseURL = config.baseURL
+  constructor (config: CustomFetchOptions) {
+    const { handler, offline, ...restConfig } = config
+    this._config = restConfig
+    this.baseURL = config.baseURL || ''
     this.immutableKey = config.immutableKey ?? false
 
-    this.showLogs = config.showLogs ?? import.meta.dev
+    this.showLogs = config.showLogs ?? import.meta.dev ?? false
 
-    if (config.handler) {
-      this.baseHandler = config.handler
+    if (handler) {
+      this._baseHandler = handler || Noop
     }
 
-    this.offline = config?.offline || Noop
+    if (offline) {
+      this.offline = offline
+    }
 
-    this.interceptors = {
+    this._interceptors = {
       onRequest: config.onRequest || Noop,
       onRequestError: config.onRequestError || Noop,
       onResponse: config.onResponse || Noop,
@@ -68,13 +55,13 @@ export class CustomFetch {
     }
   }
 
-  private baseConfig (config: HTTPConfig): HTTPConfig {
+  private baseConfig (config: CustomFetchOptions): CustomFetchOptions {
     const { useHandler = true, handler, query = {}, params = {} } = config
-    const baseHandler = handler || this.baseHandler
+    const baseHandler = handler || this._baseHandler
     const _name = Object.keys(query).length ? 'query' : 'params'
     const mergeObj = {
-      ...query,
-      ...params
+      ...params,
+      ...query
     }
     if (useHandler && baseHandler && typeof baseHandler === 'function') {
       return { [_name]: baseHandler(mergeObj) }
@@ -83,30 +70,40 @@ export class CustomFetch {
     return { [_name]: { ...mergeObj } }
   }
 
-  http<DataT, ErrorT = Error | null>(url: NitroFetchRequest, config: HTTPConfig & { method: FetchMethod }, options: AsyncDataOptions<DataT> = {}): CustomFetchReturnValue<DataT, ErrorT> {
-    config.baseURL = config?.baseURL || this.baseURL
+  request<DataT, NuxtErrorDataT = Error | null>(url: NitroFetchRequest, config: CustomFetchOptions & { method: FetchMethod }, options: AsyncDataOptions<DataT> = {}): CustomFetchReturnValue<DataT, NuxtErrorDataT> {
+    const app = useRuntimeConfig().app
+    config.baseURL ??= this.baseURL || app.baseURL
     Object.assign(config, this.baseConfig(config))
+
     const generateOptionSegmentsWithConfig = generateOptionSegments(config)
     if (this.showLogs && import.meta.client) {
+      const { body: _body, ...resetConfig } = config
+
       let bodyLogs
       try {
-        bodyLogs = serialize(config.body)
+        bodyLogs = serialize(_body)
       }
       catch (error) {
-        console.warn('[Custom Fetch] couldn\'t serialize \`Body:\`', error)
+        console.warn('[Custom Fetch] couldn\'t serialize [Body]:', error)
       }
-      console.warn('[Custom Fetch] \`Request:\`', url, ' \`Query:\`', serialize(generateOptionSegmentsWithConfig), ' \`Body:\`', bodyLogs)
+      console.warn([
+        '———————————— [Custom Fetch] ————————————',
+        `[Request URL]: ${url}`,
+        '',
+        `[Query]: ${serialize(resetConfig)}`,
+        '',
+        `[Body]: ${bodyLogs}`,
+        '————————————————————————————————————'
+      ].join('\n'))
     }
-    const { onRequest, onRequestError, onResponse, onResponseError, offline, handler, useHandler, showLogs, immutableKey, ...restAjaxConfig } = config
+    const { onRequest, onRequestError, onResponse, onResponseError, offline, handler, useHandler, showLogs, immutableKey, ...asyncDataOptions } = config
 
     if (import.meta.client && navigator && !navigator.onLine) {
-      if (offline) {
-        offline()
-      }
+      this.offline()
     }
 
-    const interceptors = this.interceptors
-    const _config = reactive({ ...restAjaxConfig })
+    const interceptors = this._interceptors
+    const _config = reactive({ ...asyncDataOptions })
 
     const defaultOptions = {
       async onRequest (ctx: FetchContext) {
@@ -144,55 +141,84 @@ export class CustomFetch {
     }
 
     const hashValue: Array<string | undefined | Record<string, string>> = ['custom_fetch:', url as string]
+    if (import.meta.dev && !config.key && (this.immutableKey || immutableKey)) {
+      console.warn('[Custom Fetch] immutableKey is enabled, the key will be generated by hash([custom_fetch:, url])')
+    }
+
     if (!this.immutableKey && !immutableKey) {
       hashValue.push(...generateOptionSegmentsWithConfig)
     }
 
-    const key = hash(hashValue).replace(/[-_]/g, '').slice(0, 10)
+    const hashKey = hash(hashValue).replace(/[-_]/g, '').slice(0, 10)
 
-    options.default = options.default ?? (() => null)
+    const key = computed(() => toValue(config.key) || hashKey)
+
+    watch(key, (key, oldKey) => {
+      if (oldKey) {
+        _cachedController.get(oldKey)?.abort?.()
+        _cachedController.delete(oldKey)
+      }
+      else {
+        const controller = typeof AbortController !== 'undefined' ? new AbortController() : ({} as AbortController)
+        _cachedController.set(key, controller)
+      }
+    })
 
     const _handler = () => {
-      if (_cachedController.get(key)) {
-        _cachedController.get(key)?.abort?.()
+      if (_cachedController.get(key.value)) {
+        _cachedController.get(key.value)?.abort?.()
       }
 
       return useRequestFetch()(url as string, {
-        signal: _cachedController.get(key)?.signal,
+        signal: _cachedController.get(key.value)?.signal,
         ...defaultOptions,
         ..._config
       }) as unknown as Promise<DataT>
     }
 
     const controller = typeof AbortController !== 'undefined' ? new AbortController() : ({} as AbortController)
-    const nuxtApp = useNuxtApp()
 
-    // const instance = getCurrentInstance()
-    // if (import.meta.client && !nuxtApp.isHydrating && (!instance || instance?.isMounted)) {
+    const nuxtApp = useNuxtApp()
     if (import.meta.client && !nuxtApp.isHydrating) {
+      // If server instance is exist, at client use same
+      if (nuxtApp._asyncData[key.value]?._deps) {
+        nuxtApp._asyncData[key.value]!.execute({
+          cause: 'initial',
+          dedupe: options.dedupe
+        })
+        return nuxtApp._asyncData[key.value] as any
+      }
+      /**
+       * WRAN: At client its only for compat data. The behavior is not same as useAsyncData
+       * And client not has cachedData
+       */
+      const _ref = options.deep ? ref : shallowRef
+
+      options.default ??= () => asyncDataDefaults.value as any
+
       const asyncData: {
         data: Ref<any>
-        /**
-         * @deprecated This may be removed in a future major version.
-         */
+        error: Ref<(NuxtErrorDataT extends Error | NuxtError<unknown> ? NuxtErrorDataT : NuxtError<NuxtErrorDataT>) | undefined>
         pending: Ref<boolean>
-        error: Ref<(ErrorT extends Error | NuxtError<unknown> ? ErrorT : NuxtError<ErrorT>) | null>
         status: Ref<AsyncDataRequestStatus>
-        refresh?: () => Promise<DataT>
-        execute?: () => Promise<DataT>
+        refresh?: (opts?: AsyncDataExecuteOptions) => Promise<DataT | void>
+        execute?: (opts?: AsyncDataExecuteOptions) => Promise<DataT | void>
+        clear: () => void
       } = {
-        data: ref(null),
-        pending: ref(true),
-        error: ref(null),
-        status: ref('idle')
+        data: _ref(undefined),
+        error: _ref(undefined),
+        status: _ref('idle'),
+        pending: _ref(false),
+        clear: () => clearNuxtData(key.value)
       }
-
-      asyncData.pending.value = true
+      if (pendingWhenIdle) {
+        asyncData.pending.value = true
+      }
       asyncData.status.value = 'pending'
       const promise = new Promise<DataT>((resolve, reject) => {
         try {
           resolve(_handler())
-          _cachedController.set(key, controller)
+          _cachedController.set(key.value, controller)
         }
         catch (err) {
           reject(err)
@@ -209,27 +235,30 @@ export class CustomFetch {
           }
 
           asyncData.data.value = result
-          asyncData.error.value = null
+          asyncData.error.value = asyncDataDefaults.errorValue
           asyncData.status.value = 'success'
           return asyncData
         })
         .catch((error: any) => {
           asyncData.error.value = createError(error) as any
-          asyncData.data.value = unref(options?.default!())
+          asyncData.data.value = unref(options.default!())
           asyncData.status.value = 'error'
           return asyncData
         })
         .finally(() => {
-          asyncData.pending.value = false
-          _cachedController.delete(key)
+          if (pendingWhenIdle) {
+            asyncData.pending.value = false
+          }
+          _cachedController.delete(key.value)
         })
 
       asyncData.refresh = asyncData.execute = () => _handler().then(result => asyncData.data.value = result)
+
       const hasScope = getCurrentScope()
       if (options.watch) {
         const unsub = watch(options.watch, async () => {
           asyncData.refresh!()
-        })
+        }, { flush: 'post' })
         if (hasScope) {
           onScopeDispose(unsub)
         }
@@ -238,18 +267,18 @@ export class CustomFetch {
       return promise as any
     }
 
-    return useAsyncData<DataT, ErrorT>(config.key || key, _handler, options)
+    return useAsyncData<DataT, NuxtErrorDataT>(key, _handler, options) as CustomFetchReturnValue<DataT, NuxtErrorDataT>
   }
 
-  get<DataT, ErrorT = Error | null>(url: NitroFetchRequest, config: HTTPConfig = {}, options?: AsyncDataOptions<DataT>) {
-    return this.http<DataT, ErrorT>(url, {
+  get<DataT, NuxtErrorDataT = Error | null>(url: NitroFetchRequest, config: CustomFetchOptions = {}, options?: AsyncDataOptions<DataT>) {
+    return this.request<DataT, NuxtErrorDataT>(url, {
       ...config,
       method: 'GET'
     }, options)
   }
 
-  post<DataT, ErrorT = Error | null>(url: NitroFetchRequest, config: HTTPConfig = {}, options?: AsyncDataOptions<DataT>) {
-    return this.http<DataT, ErrorT>(url, {
+  post<DataT, NuxtErrorDataT = Error | null>(url: NitroFetchRequest, config: CustomFetchOptions = {}, options?: AsyncDataOptions<DataT>) {
+    return this.request<DataT, NuxtErrorDataT>(url, {
       ...config,
       method: 'POST'
     }, options)
