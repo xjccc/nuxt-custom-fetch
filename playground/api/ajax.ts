@@ -3,7 +3,7 @@ import { CustomFetch } from '#imports'
 
 const ajax = new CustomFetch({
   baseURL: '',
-  handler (params = {}) {
+  handler (params) {
     const obj = JSON.stringify(params)
     return { a: obj }
   },

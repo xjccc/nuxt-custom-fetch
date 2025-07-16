@@ -7,7 +7,10 @@
       点击加载
     </button>
     <button
-      @click="refresh"
+      @click="async () => {
+        _refresh()
+        console.log('重置')
+      }"
     >
       重置
     </button>
@@ -15,17 +18,15 @@
 </template>
 
 <script setup lang="ts">
-import { nextTick, onMounted, ref, watch } from 'vue'
-import * as API from '../api'
+import { nextTick, onMounted, ref } from 'vue'
+import * as API from '../../api'
 
 const page = ref(1)
 const list = ref<number[]>([])
 const num = ref<number>()
-const { data, refresh, pending, error, status } = await API.getListReactive(page)
-
-watch(() => data.value, async () => {
-  await nextTick()
-  console.log(data.value)
+let _refresh = () => {}
+const getList = async () => {
+  const { data, refresh, error, status } = await API.getList(page.value)
 
   if (page.value === 1) {
     list.value = data.value?.data || []
@@ -33,20 +34,24 @@ watch(() => data.value, async () => {
   else {
     list.value = list.value.concat(data.value?.data || [])
   }
-}, {
-  immediate: true
-})
-console.log(data.value, pending.value, error.value, status.value, 'data =====>')
+  _refresh = refresh
+  console.log(data.value, error.value, status.value, 'data =====>')
+}
 
 const getNum = async () => {
-  const { data, refresh, pending, error, status } = await API.getNum(page.value)
-
+  const { data, refresh, error, status } = await API.getNum(page.value)
+  // const { data, refresh } = await useFetch('/api/get-list', {
+  //   params: {
+  //     page: page.value
+  //   }
+  // })
   if (data.value) {
     num.value = data.value.nums
-    console.log(data.value, refresh, pending.value, error.value, status.value, 'nums =====>')
+    console.log(data.value, refresh, error.value, status.value, 'nums =====>')
   }
 }
 
+await getList()
 await getNum()
 
 onMounted(async () => {
@@ -57,5 +62,7 @@ onMounted(async () => {
 const loadMore = () => {
   page.value++
   console.log(page.value, 'page.value -------')
+  getList()
+  getList()
 }
 </script>

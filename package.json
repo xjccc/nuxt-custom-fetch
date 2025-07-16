@@ -1,7 +1,8 @@
 {
   "name": "nuxt-custom-fetch",
   "type": "module",
-  "version": "2.3.2",
+  "version": "4.0.0-alpha.14",
+  "packageManager": "pnpm@8.15.3+sha1.64838798f519c18029c1e8a1310e16101fc2eda0",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -27,6 +28,7 @@
     "lint:fix": "eslint . --fix",
     "prepare": "husky",
     "commit": "git-cz",
+    "prerelease": "changelogen --prerelease && pnpm prepack && npm publish --tag alpha",
     "release": "changelogen --release && pnpm prepack && npm publish && git push --follow-tags"
   },
   "config": {
@@ -35,24 +37,26 @@
     }
   },
   "dependencies": {
-    "@nuxt/kit": "^3.16.2",
-    "ohash": "^2.0.11"
+    "@vue/shared": "^3.5.17",
+    "ohash": "^2.0.11",
+    "vue": "^3.5.17"
   },
   "devDependencies": {
-    "@antfu/eslint-config": "^4.12.0",
-    "@commitlint/cli": "^19.8.0",
-    "@commitlint/config-conventional": "^19.8.0",
+    "@antfu/eslint-config": "^4.17.0",
+    "@commitlint/cli": "^19.8.1",
+    "@commitlint/config-conventional": "^19.8.1",
+    "@nuxt/kit": "4.0.0",
     "@nuxt/module-builder": "^1.0.1",
-    "@nuxt/schema": "^3.16.2",
-    "@types/node": "^22.14.1",
-    "changelogen": "^0.6.1",
+    "@nuxt/schema": "4.0.0",
+    "@types/node": "^24.0.14",
+    "changelogen": "^0.6.2",
     "commitizen": "^4.3.1",
-    "cz-git": "^1.11.1",
-    "eslint": "^9.24.0",
+    "cz-git": "^1.12.0",
+    "eslint": "^9.31.0",
     "husky": "^9.1.7",
-    "lint-staged": "^15.5.1",
-    "nitro": "npm:nitropack",
-    "nuxt": "^3.16.2",
+    "lint-staged": "^16.1.2",
+    "nitro": "npm:nitropack@^2.12.0",
+    "nuxt": "4.0.0",
     "typescript": "5.8.3"
   },
   "husky": {
