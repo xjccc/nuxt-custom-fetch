@@ -1,5 +1,17 @@
 # nuxt-custom-fetch
 
+## v4.0.1
+
+[compare changes](https://github.com/xjccc/nuxt-custom-fetch/compare/v2.3.2...v4.0.1)
+
+### 💅 Refactors
+
+- Wrapper useAsyncData >= nuxt@3.17 ([#89](https://github.com/xjccc/nuxt-custom-fetch/pull/89))
+
+### ❤️ Contributors
+
+- Xjccc ([@xjccc](https://github.com/xjccc))
+
 ## v2.3.2
 
 [compare changes](https://github.com/xjccc/nuxt-custom-fetch/compare/v2.3.1...v2.3.2)
