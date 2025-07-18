@@ -2,7 +2,7 @@
   "name": "nuxt-custom-fetch",
   "type": "module",
   "version": "4.0.1",
-  "packageManager": "pnpm@8.15.3+sha1.64838798f519c18029c1e8a1310e16101fc2eda0",
+  "packageManager": "pnpm@8.15.9+sha512.499434c9d8fdd1a2794ebf4552b3b25c0a633abcee5bb15e7b5de90f32f47b513aca98cd5cfd001c31f0db454bc3804edccd578501e4ca293a6816166bbd9f81",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -55,7 +55,7 @@
     "eslint": "^9.31.0",
     "husky": "^9.1.7",
     "lint-staged": "^16.1.2",
-    "nitro": "npm:nitropack@^2.12.0",
+    "nitro": "npm:nitropack@^2.12.3",
     "nuxt": "4.0.0",
     "typescript": "5.8.3"
   },
