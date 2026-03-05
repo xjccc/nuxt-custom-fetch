@@ -2,7 +2,7 @@
   "name": "nuxt-custom-fetch",
   "type": "module",
   "version": "4.0.1",
-  "packageManager": "pnpm@10.13.1+sha512.37ebf1a5c7a30d5fabe0c5df44ee8da4c965ca0c5af3dbab28c3a1681b70a256218d05c81c9c0dcf767ef6b8551eb5b960042b9ed4300c59242336377e01cfad",
+  "packageManager": "pnpm@10.30.3+sha512.c961d1e0a2d8e354ecaa5166b822516668b7f44cb5bd95122d590dd81922f606f5473b6d23ec4a5be05e7fcd18e8488d47d978bbe981872f1145d06e9a740017",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -37,27 +37,27 @@
     }
   },
   "dependencies": {
-    "@vue/shared": "^3.5.17",
+    "@vue/shared": "^3.5.29",
     "ohash": "^2.0.11",
-    "vue": "^3.5.17"
+    "vue": "^3.5.29"
   },
   "devDependencies": {
-    "@antfu/eslint-config": "^4.17.0",
+    "@antfu/eslint-config": "^4.19.0",
     "@commitlint/cli": "^19.8.1",
     "@commitlint/config-conventional": "^19.8.1",
-    "@nuxt/kit": "4.0.0",
-    "@nuxt/module-builder": "^1.0.1",
-    "@nuxt/schema": "4.0.0",
-    "@types/node": "^24.0.14",
+    "@nuxt/kit": "4.3.1",
+    "@nuxt/module-builder": "^1.0.2",
+    "@nuxt/schema": "4.3.1",
+    "@types/node": "^24.11.0",
     "changelogen": "^0.6.2",
     "commitizen": "^4.3.1",
     "cz-git": "^1.12.0",
-    "eslint": "^9.31.0",
+    "eslint": "^9.39.3",
     "husky": "^9.1.7",
-    "lint-staged": "^16.1.2",
-    "nitro": "npm:nitropack@^2.12.3",
-    "nuxt": "4.0.0",
-    "typescript": "5.8.3"
+    "lint-staged": "^16.3.2",
+    "nitro": "npm:nitropack@^2.13.1",
+    "nuxt": "4.3.1",
+    "typescript": "5.9.3"
   },
   "husky": {
     "hooks": {
