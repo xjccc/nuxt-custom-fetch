@@ -21,26 +21,26 @@ export type KeysOf<T> = Array<
       : never
     : never
 >
-export type FetchMethod =
-  | 'options'
-  | 'GET'
-  | 'POST'
-  | 'get'
-  | 'HEAD'
-  | 'PATCH'
-  | 'PUT'
-  | 'DELETE'
-  | 'CONNECT'
-  | 'OPTIONS'
-  | 'TRACE'
-  | 'post'
-  | 'head'
-  | 'patch'
-  | 'put'
-  | 'delete'
-  | 'connect'
-  | 'trace'
-  | undefined
+export type FetchMethod
+  = | 'options'
+    | 'GET'
+    | 'POST'
+    | 'get'
+    | 'HEAD'
+    | 'PATCH'
+    | 'PUT'
+    | 'DELETE'
+    | 'CONNECT'
+    | 'OPTIONS'
+    | 'TRACE'
+    | 'post'
+    | 'head'
+    | 'patch'
+    | 'put'
+    | 'delete'
+    | 'connect'
+    | 'trace'
+    | undefined
 
 export interface CustomFetchOptions extends Omit<FetchOptions, 'method'> {
   /** unique key for fetch */
