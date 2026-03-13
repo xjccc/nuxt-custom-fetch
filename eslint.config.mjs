@@ -27,7 +27,8 @@ export default antfu(
         consistent: true
       }],
       'style/space-before-function-paren': [2, 'always'],
-      'style/space-before-blocks': [2, 'always']
+      'style/space-before-blocks': [2, 'always'],
+      'e18e/prefer-array-from-map': 0
     }
   }
 )

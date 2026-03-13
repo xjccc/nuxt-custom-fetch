@@ -41,7 +41,7 @@ const getList = async () => {
     list.value = data.value?.data || []
   }
   else {
-    list.value = list.value.concat(data.value?.data || [])
+    list.value = [...list.value, ...data.value?.data || []]
   }
   console.log(data.value, 'data =====>')
 }

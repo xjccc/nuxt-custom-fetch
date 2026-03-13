@@ -32,7 +32,7 @@ const getList = async () => {
     list.value = data.value?.data || []
   }
   else {
-    list.value = list.value.concat(data.value?.data || [])
+    list.value = [...list.value, ...data.value?.data || []]
   }
   _refresh = refresh
   console.log(data.value, error.value, status.value, 'data =====>')
