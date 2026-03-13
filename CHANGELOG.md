@@ -1,5 +1,17 @@
 # nuxt-custom-fetch
 
+## v4.1.1
+
+[compare changes](https://github.com/xjccc/nuxt-custom-fetch/compare/v4.0.1...v4.1.1)
+
+### 💅 Refactors
+
+- Replace lint-staged to nano-staged ([#106](https://github.com/xjccc/nuxt-custom-fetch/pull/106))
+
+### ❤️ Contributors
+
+- Xjccc ([@xjccc](https://github.com/xjccc))
+
 ## v4.0.1
 
 [compare changes](https://github.com/xjccc/nuxt-custom-fetch/compare/v2.3.2...v4.0.1)
