@@ -22,6 +22,7 @@ interface AsyncDataExecuteOptions {
 }
 
 const _cachedController = new Map<string, AbortController>()
+const REPLACE_REG = /[-_]/g
 
 export class CustomFetch {
   baseURL
@@ -149,7 +150,7 @@ export class CustomFetch {
       hashValue.push(...generateOptionSegmentsWithConfig)
     }
 
-    const hashKey = hash(hashValue).replace(/[-_]/g, '').slice(0, 10)
+    const hashKey = hash(hashValue).replace(REPLACE_REG, '').slice(0, 10)
 
     const key = computed(() => toValue(config.key) || hashKey)
 
