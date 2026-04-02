@@ -49,6 +49,7 @@ function createInitialState () {
     })) as UseAsyncDataImpl,
     clearNuxtDataCalls: [] as string[],
     watchCalls: [] as WatchCall[],
+    watchStopCalls: 0,
     scopeDisposers: [] as Array<() => void>,
     currentScope: null as unknown
   }
@@ -64,6 +65,7 @@ export function __resetNuxtMocks () {
   state.useAsyncData = nextState.useAsyncData
   state.clearNuxtDataCalls = []
   state.watchCalls = []
+  state.watchStopCalls = 0
   state.scopeDisposers = []
   state.currentScope = nextState.currentScope
 }
@@ -152,5 +154,7 @@ export function watch (source: unknown, callback: (...args: any[]) => unknown, o
     callback,
     options
   })
-  return () => {}
+  return () => {
+    state.watchStopCalls += 1
+  }
 }

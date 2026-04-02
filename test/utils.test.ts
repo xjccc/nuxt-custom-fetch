@@ -33,6 +33,22 @@ describe('resolveReactiveValue', () => {
 
     expect(resolveReactiveValue(formData)).toBe(formData)
   })
+
+  it('does not throw when optional web constructors are unavailable', () => {
+    vi.stubGlobal('Blob', undefined)
+    vi.stubGlobal('File', undefined)
+    vi.stubGlobal('FormData', undefined)
+    vi.stubGlobal('Headers', undefined)
+    vi.stubGlobal('Request', undefined)
+    vi.stubGlobal('URLSearchParams', undefined)
+
+    try {
+      expect(() => resolveReactiveValue(new Date())).not.toThrow()
+    }
+    finally {
+      vi.unstubAllGlobals()
+    }
+  })
 })
 
 describe('generateOptionSegments', () => {
@@ -98,6 +114,39 @@ describe('generateOptionSegments', () => {
     ])
   })
 
+  it('deeply unwraps nested reactive params and query values', () => {
+    const segments = generateOptionSegments({
+      method: 'GET',
+      params: {
+        filters: {
+          page: ref(2),
+          tags: [ref('latest')]
+        }
+      },
+      query: {
+        cursor: {
+          after: ref('abc')
+        }
+      }
+    })
+
+    expect(segments).toEqual([
+      'GET',
+      undefined,
+      {
+        filters: {
+          page: 2,
+          tags: ['latest']
+        }
+      },
+      {
+        cursor: {
+          after: 'abc'
+        }
+      }
+    ])
+  })
+
   it('hashes plain object bodies after deep unwrapping refs', () => {
     const body = {
       profile: {
@@ -159,6 +208,38 @@ describe('generateOptionSegments', () => {
     })
 
     expect(segments.at(-1)).toBe(hash(''))
+  })
+
+  it('hashes direct falsy body values', () => {
+    expect(generateOptionSegments({
+      method: 'POST',
+      body: ''
+    }).at(-1)).toBe(hash(''))
+
+    expect(generateOptionSegments({
+      method: 'POST',
+      body: 0 as any
+    }).at(-1)).toBe(hash(0))
+
+    expect(generateOptionSegments({
+      method: 'POST',
+      body: false as any
+    }).at(-1)).toBe(hash(false))
+  })
+
+  it('does not throw when body hashing runs without optional web constructors', () => {
+    vi.stubGlobal('FormData', undefined)
+    vi.stubGlobal('File', undefined)
+
+    try {
+      expect(generateOptionSegments({
+        method: 'POST',
+        body: 'payload'
+      }).at(-1)).toBe(hash('payload'))
+    }
+    finally {
+      vi.unstubAllGlobals()
+    }
   })
 })
 

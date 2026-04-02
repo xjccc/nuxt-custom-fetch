@@ -169,6 +169,17 @@ export class CustomFetch {
       ...config,
       baseURL: config.baseURL ?? (this.baseURL || runtimeConfig.app?.baseURL || '')
     }
+
+    const normalizedParams = resolveReactiveValue(toValue(resolvedConfig.params))
+    if (normalizedParams !== undefined) {
+      resolvedConfig.params = normalizedParams as typeof resolvedConfig.params
+    }
+
+    const normalizedQuery = resolveReactiveValue(toValue(resolvedConfig.query))
+    if (normalizedQuery !== undefined) {
+      resolvedConfig.query = normalizedQuery as typeof resolvedConfig.query
+    }
+
     Object.assign(resolvedConfig, this.baseConfig(resolvedConfig))
 
     const generateOptionSegmentsWithConfig = generateOptionSegments(resolvedConfig)
@@ -301,6 +312,15 @@ export class CustomFetch {
       let activeController: AbortController | undefined
       let activeRequest: Promise<void> | undefined
       let requestId = 0
+      let stopKeyWatch: (() => void) | undefined
+      let stopOptionWatch: (() => void) | undefined
+
+      const stopWatchers = () => {
+        stopKeyWatch?.()
+        stopKeyWatch = undefined
+        stopOptionWatch?.()
+        stopOptionWatch = undefined
+      }
 
       const asyncData: CustomFetchAsyncDataState<DataT, PickKeys, DefaultT, NuxtErrorDataT> = {
         data: _ref(getDefaultValue()) as Ref<CustomFetchData<DataT, PickKeys, DefaultT>>,
@@ -308,6 +328,7 @@ export class CustomFetch {
         status: _ref(options.immediate === false ? 'idle' : 'pending'),
         pending: _ref(options.immediate !== false),
         clear: () => {
+          stopWatchers()
           activeController?.abort()
           _cachedController.delete(key.value)
           if (_cachedClientAsyncData.get(key.value) === asyncData) {
@@ -399,7 +420,7 @@ export class CustomFetch {
 
       _cachedClientAsyncData.set(key.value, asyncData as ClientAsyncDataEntry)
 
-      watch(key, (newKey, oldKey) => {
+      stopKeyWatch = watch(key, (newKey, oldKey) => {
         if (oldKey) {
           _cachedController.get(oldKey)?.abort?.()
           _cachedController.delete(oldKey)
@@ -420,12 +441,13 @@ export class CustomFetch {
 
       const hasScope = getCurrentScope()
       if (options.watch) {
-        const unsub = watch(options.watch, async () => {
+        stopOptionWatch = watch(options.watch, async () => {
           await asyncData.refresh({ cause: 'watch' })
         }, { flush: 'post' })
-        if (hasScope) {
-          onScopeDispose(unsub)
-        }
+      }
+
+      if (hasScope) {
+        onScopeDispose(stopWatchers)
       }
 
       if (options.immediate === false) {

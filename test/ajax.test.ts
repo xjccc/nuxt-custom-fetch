@@ -634,6 +634,37 @@ describe('customFetch', () => {
     expect(fetchOptions.query.token).toBeUndefined()
   })
 
+  it('normalizes params and query refs before merging request config', async () => {
+    const requestFetch = vi.fn().mockResolvedValue({ ok: true })
+
+    __setRequestFetchImpl(requestFetch)
+    __setUseAsyncDataImpl(async (_key, handler) => {
+      return createAsyncDataResult(await handler({}, {
+        signal: new AbortController().signal
+      }))
+    })
+
+    const ajax = new CustomFetch({
+      baseURL: '/api'
+    })
+
+    await ajax.get<{ ok: boolean }>('/search', {
+      params: ref({
+        page: ref(1)
+      }),
+      query: ref({
+        search: ref('nuxt')
+      })
+    })
+
+    const [, fetchOptions] = requestFetch.mock.calls.at(-1) as [string, Record<string, any>]
+    expect(fetchOptions.params).toEqual({ page: 1 })
+    expect(fetchOptions.query).toEqual({
+      page: 1,
+      search: 'nuxt'
+    })
+  })
+
   it('prefers request-level handler over the instance handler', async () => {
     const requestFetch = vi.fn().mockResolvedValue({ ok: true })
 
@@ -834,6 +865,7 @@ describe('customFetch', () => {
     expect(asyncData.status.value).toBe('idle')
     expect(asyncData.pending.value).toBe(false)
     expect(mockState.clearNuxtDataCalls).toContain('fallback:2')
+    expect(mockState.watchStopCalls).toBe(2)
   })
 
   it('re-fetches when the fallback key changes and immediate mode is enabled', async () => {
@@ -987,6 +1019,37 @@ describe('customFetch', () => {
       asyncDataDefaults.value = previousValue
       asyncDataDefaults.errorValue = previousErrorValue
     }
+  })
+
+  it('disposes fallback watchers on clear when there is no active scope', async () => {
+    const requestFetch = vi.fn().mockResolvedValue({ count: 1 })
+    const key = ref('fallback:clear:1')
+    const mockState = __getNuxtMockState()
+
+    __setRequestFetchImpl(requestFetch)
+    __setUseAsyncDataImpl(() => {
+      throw new Error('outside of a plugin')
+    })
+
+    const ajax = new CustomFetch({
+      baseURL: '/api',
+      showLogs: false
+    })
+
+    const asyncData = await ajax.get<{ count: number }>('/hello', {
+      key
+    }, {
+      default: () => ({ count: 0 }),
+      immediate: false,
+      watch: [() => key.value]
+    })
+
+    expect(mockState.watchCalls).toHaveLength(2)
+    expect(mockState.watchStopCalls).toBe(0)
+
+    asyncData.clear()
+
+    expect(mockState.watchStopCalls).toBe(2)
   })
 
   it('ignores stale fallback results after dedupe cancel starts a newer request', async () => {
