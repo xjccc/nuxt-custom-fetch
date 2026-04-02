@@ -168,6 +168,35 @@ describe('customFetch', () => {
     expect(offline).toHaveBeenCalledTimes(1)
   })
 
+  it('skips the offline check when navigator is unavailable', async () => {
+    const requestFetch = vi.fn().mockResolvedValue({ ok: true })
+    const offline = vi.fn()
+
+    vi.stubGlobal('navigator', undefined)
+    __setRequestFetchImpl(requestFetch)
+    __setUseAsyncDataImpl(async (_key, handler) => {
+      return createAsyncDataResult(await handler({}, {
+        signal: new AbortController().signal
+      }))
+    })
+
+    try {
+      const ajax = new CustomFetch({
+        baseURL: '/api',
+        offline,
+        showLogs: false
+      })
+
+      const { data } = await ajax.get<{ ok: boolean }>('/hello')
+
+      expect(data.value).toEqual({ ok: true })
+      expect(offline).not.toHaveBeenCalled()
+    }
+    finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
   it('logs request details when showLogs is enabled on the client', async () => {
     const requestFetch = vi.fn().mockResolvedValue({ ok: true })
     const warn = vi.spyOn(console, 'warn')
@@ -592,6 +621,67 @@ describe('customFetch', () => {
     expect(capturedKeys[0]).toBe(capturedKeys[1])
   })
 
+  it('generates url-only keys when immutableKey is passed on the request config', async () => {
+    const capturedKeys: string[] = []
+
+    __setUseAsyncDataImpl(async (key) => {
+      capturedKeys.push(key.value)
+
+      return createAsyncDataResult({ ok: true })
+    })
+
+    const ajax = new CustomFetch({
+      baseURL: '/api'
+    })
+
+    await ajax.get<{ ok: boolean }>('/hello', {
+      immutableKey: true,
+      params: {
+        page: 1
+      }
+    })
+    await ajax.get<{ ok: boolean }>('/hello', {
+      immutableKey: true,
+      params: {
+        page: 2
+      }
+    })
+
+    expect(capturedKeys).toHaveLength(2)
+    expect(capturedKeys[0]).toBe(capturedKeys[1])
+  })
+
+  it('lets request immutableKey override the instance setting', async () => {
+    const capturedKeys: string[] = []
+
+    __setUseAsyncDataImpl(async (key) => {
+      capturedKeys.push(key.value)
+
+      return createAsyncDataResult({ ok: true })
+    })
+
+    const ajax = new CustomFetch({
+      baseURL: '/api',
+      immutableKey: true
+    })
+
+    await ajax.get<{ ok: boolean }>('/hello', {
+      immutableKey: false,
+      params: {
+        page: 1
+      }
+    })
+    await ajax.get<{ ok: boolean }>('/hello', {
+      immutableKey: false,
+      params: {
+        page: 2
+      }
+    })
+
+    expect(capturedKeys).toHaveLength(2)
+    expect(capturedKeys[0]).not.toBe(capturedKeys[1])
+  })
+
   it('warns when immutableKey is enabled without an explicit key in dev mode', async () => {
     const warn = vi.spyOn(console, 'warn')
 
@@ -712,6 +802,60 @@ describe('customFetch', () => {
     expect(fetchOptions.query).toEqual({
       page: 1,
       search: 'nuxt'
+    })
+  })
+
+  it('re-resolves reactive params, query, and handler output on fallback refresh', async () => {
+    const requestFetch = vi.fn().mockResolvedValue({ ok: true })
+    const page = ref(1)
+    const search = ref('nuxt')
+
+    __setRequestFetchImpl(requestFetch)
+    __setUseAsyncDataImpl(() => {
+      throw new Error('outside of a plugin')
+    })
+
+    const ajax = new CustomFetch({
+      baseURL: '/api',
+      handler: params => ({
+        ...params,
+        token: `page-${params.page}`
+      }),
+      showLogs: false
+    })
+
+    const asyncData = await ajax.get<{ ok: boolean }>('/search', {
+      params: ref({
+        page
+      }),
+      query: ref({
+        search
+      })
+    }, {
+      immediate: false
+    })
+
+    await asyncData.execute({ cause: 'initial' })
+
+    const [, firstFetchOptions] = requestFetch.mock.calls[0] as [string, Record<string, any>]
+    expect(firstFetchOptions.params).toEqual({ page: 1 })
+    expect(firstFetchOptions.query).toEqual({
+      page: 1,
+      search: 'nuxt',
+      token: 'page-1'
+    })
+
+    page.value = 2
+    search.value = 'vue'
+
+    await asyncData.refresh({ cause: 'refresh:manual' })
+
+    const [, secondFetchOptions] = requestFetch.mock.calls[1] as [string, Record<string, any>]
+    expect(secondFetchOptions.params).toEqual({ page: 2 })
+    expect(secondFetchOptions.query).toEqual({
+      page: 2,
+      search: 'vue',
+      token: 'page-2'
     })
   })
 
@@ -1100,6 +1244,41 @@ describe('customFetch', () => {
     asyncData.clear()
 
     expect(mockState.watchStopCalls).toBe(2)
+  })
+
+  it('evicts old fallback cache entries without a scope', async () => {
+    const requestFetch = vi.fn().mockResolvedValue({ count: 1 })
+    const mockState = __getNuxtMockState()
+    const entries: unknown[] = []
+    const initialWatchStopCalls = mockState.watchStopCalls
+
+    __setRequestFetchImpl(requestFetch)
+    __setUseAsyncDataImpl(() => {
+      throw new Error('outside of a plugin')
+    })
+
+    const ajax = new CustomFetch({
+      baseURL: '/api',
+      showLogs: false
+    })
+
+    for (let index = 0; index <= 50; index += 1) {
+      entries.push(await ajax.get<{ count: number }>('/hello', {
+        key: `fallback:cache:${index}`
+      }, {
+        immediate: false
+      }))
+    }
+
+    expect(mockState.watchStopCalls).toBeGreaterThan(initialWatchStopCalls)
+
+    const recreatedEntry = await ajax.get<{ count: number }>('/hello', {
+      key: 'fallback:cache:0'
+    }, {
+      immediate: false
+    })
+
+    expect(recreatedEntry).not.toBe(entries[0])
   })
 
   it('ignores stale fallback results after dedupe cancel starts a newer request', async () => {

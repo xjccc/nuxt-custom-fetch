@@ -1,6 +1,8 @@
+import { __resetCustomFetchCaches } from '../src/runtime/ajax'
 import { __resetNuxtMocks } from './mocks/nuxt-imports'
 
 beforeEach(() => {
+  __resetCustomFetchCaches()
   __resetNuxtMocks()
 
   if (!('navigator' in globalThis)) {

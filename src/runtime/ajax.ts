@@ -50,12 +50,14 @@ interface ClientAsyncDataEntry {
 }
 
 type RequestFetchOptions = Omit<CustomFetchRequestOptions, 'key' | 'immutableKey' | 'showLogs' | 'useHandler' | 'handler' | 'offline'>
+type ResolvableRequestFetchOptions = RequestFetchOptions & Pick<CustomFetchRequestOptions, 'handler' | 'useHandler'>
 type ResolvedRequestFetchOptions = ResolvedCustomFetchOptions & {
   timeout?: number
 }
 
 const _cachedController = new Map<string, AbortController>()
 const _cachedClientAsyncData = new Map<string, ClientAsyncDataEntry>()
+const MAX_UNSCOPED_CLIENT_ASYNC_DATA_ENTRIES = 50
 const REPLACE_REG = /[-_]/g
 const FALLBACK_TO_CLIENT_ASYNC_DATA_RE = /component is already mounted|outside of a plugin|outside of a nuxt instance|requires access to the nuxt instance/i
 
@@ -80,26 +82,31 @@ function shouldFallbackToClientAsyncData (error: unknown) {
   return error instanceof Error && FALLBACK_TO_CLIENT_ASYNC_DATA_RE.test(error.message)
 }
 
-function resolveFetchConfig (config: RequestFetchOptions, timeout?: number): ResolvedRequestFetchOptions {
-  const baseURL = toValue(config.baseURL)
-  const body = resolveReactiveValue<ResolvedRequestFetchOptions['body']>(toValue(config.body))
-  const cache = toValue(config.cache)
-  const headers = resolveReactiveValue<ResolvedRequestFetchOptions['headers']>(toValue(config.headers))
-  const method = toValue(config.method)
-  const params = resolveReactiveValue<ResolvedRequestFetchOptions['params']>(toValue(config.params))
-  const query = resolveReactiveValue<ResolvedRequestFetchOptions['query']>(toValue(config.query))
+function pruneClientAsyncDataCache () {
+  while (_cachedClientAsyncData.size > MAX_UNSCOPED_CLIENT_ASYNC_DATA_ENTRIES) {
+    const oldestEntry = _cachedClientAsyncData.entries().next().value as [string, ClientAsyncDataEntry] | undefined
 
-  return {
-    ...config,
-    baseURL,
-    body,
-    cache,
-    headers,
-    method,
-    params,
-    query,
-    timeout
+    if (!oldestEntry) {
+      return
+    }
+
+    const [, asyncData] = oldestEntry
+    asyncData.clear()
   }
+}
+
+export function __resetCustomFetchCaches () {
+  for (const controller of _cachedController.values()) {
+    controller.abort()
+  }
+
+  _cachedController.clear()
+
+  for (const asyncData of _cachedClientAsyncData.values()) {
+    asyncData.clear()
+  }
+
+  _cachedClientAsyncData.clear()
 }
 
 export class CustomFetch {
@@ -135,7 +142,9 @@ export class CustomFetch {
   }
 
   private baseConfig (config: CustomFetchOptions): CustomFetchOptions {
-    const { useHandler = true, handler, query = {}, params = {} } = config
+    const { useHandler = true, handler } = config
+    const query = resolveReactiveValue(toValue(config.query)) || {}
+    const params = resolveReactiveValue(toValue(config.params)) || {}
     const baseHandler = handler || this._baseHandler
     const _name = Object.keys(query).length ? 'query' : 'params'
     const mergeObj = {
@@ -147,6 +156,31 @@ export class CustomFetch {
     }
 
     return { [_name]: { ...mergeObj } }
+  }
+
+  private resolveFetchConfig (config: ResolvableRequestFetchOptions, timeout?: number): ResolvedRequestFetchOptions {
+    const { handler: _handler, useHandler: _useHandler, ...rawConfig } = config
+    const baseConfig = this.baseConfig(config)
+    const baseURL = toValue(rawConfig.baseURL)
+    const body = resolveReactiveValue<ResolvedRequestFetchOptions['body']>(toValue(rawConfig.body))
+    const cache = toValue(rawConfig.cache)
+    const headers = resolveReactiveValue<ResolvedRequestFetchOptions['headers']>(toValue(rawConfig.headers))
+    const method = toValue(rawConfig.method)
+    const params = resolveReactiveValue<ResolvedRequestFetchOptions['params']>(toValue(baseConfig.params ?? rawConfig.params))
+    const query = resolveReactiveValue<ResolvedRequestFetchOptions['query']>(toValue(baseConfig.query ?? rawConfig.query))
+
+    return {
+      ...rawConfig,
+      ...baseConfig,
+      baseURL,
+      body,
+      cache,
+      headers,
+      method,
+      params,
+      query,
+      timeout
+    }
   }
 
   request<ResT, NuxtErrorDataT = Error | null, DataT = ResT, PickKeys extends KeysOf<DataT> = KeysOf<DataT>, DefaultT = undefined>(
@@ -170,47 +204,6 @@ export class CustomFetch {
       baseURL: config.baseURL ?? (this.baseURL || runtimeConfig.app?.baseURL || '')
     }
 
-    const normalizedParams = resolveReactiveValue(toValue(resolvedConfig.params))
-    if (normalizedParams !== undefined) {
-      resolvedConfig.params = normalizedParams as typeof resolvedConfig.params
-    }
-
-    const normalizedQuery = resolveReactiveValue(toValue(resolvedConfig.query))
-    if (normalizedQuery !== undefined) {
-      resolvedConfig.query = normalizedQuery as typeof resolvedConfig.query
-    }
-
-    Object.assign(resolvedConfig, this.baseConfig(resolvedConfig))
-
-    const generateOptionSegmentsWithConfig = generateOptionSegments(resolvedConfig)
-    if (import.meta.dev && import.meta.client && this.showLogs) {
-      const logConfig = Object.fromEntries(Object.entries({
-        baseURL: toValue(resolvedConfig.baseURL),
-        cache: toValue(resolvedConfig.cache),
-        headers: resolveReactiveValue(toValue(resolvedConfig.headers)),
-        key: toValue(resolvedConfig.key),
-        method: toValue(resolvedConfig.method),
-        params: resolveReactiveValue(toValue(resolvedConfig.params)),
-        query: resolveReactiveValue(toValue(resolvedConfig.query))
-      }).filter(([, value]) => value !== undefined))
-
-      let bodyLogs
-      try {
-        bodyLogs = serialize(resolveReactiveValue(toValue(resolvedConfig.body)))
-      }
-      catch (error) {
-        console.warn('[Custom Fetch] couldn\'t serialize [Body]:', error)
-      }
-      console.warn([
-        '———————————— [Custom Fetch] ————————————',
-        `[Request URL]: ${url}`,
-        '',
-        `[Query]: ${serialize(logConfig)}`,
-        '',
-        `[Body]: ${bodyLogs}`,
-        '————————————————————————————————————'
-      ].join('\n'))
-    }
     const {
       immutableKey,
       key: _key,
@@ -225,13 +218,51 @@ export class CustomFetch {
       ...fetchConfig
     } = resolvedConfig
 
-    if (import.meta.client && navigator && !navigator.onLine) {
+    if (import.meta.client && typeof navigator !== 'undefined' && !navigator.onLine) {
       this.offline()
     }
 
     const interceptors = this._interceptors
     const requestFetch = useRequestFetch()
+    const requestBehaviorConfig = {
+      handler: _handlerConfig,
+      useHandler: _useHandler
+    }
     const _config: RequestFetchOptions = reactive({ ...fetchConfig })
+    const getResolvedFetchConfig = (timeout?: number) => this.resolveFetchConfig({
+      ..._config,
+      ...requestBehaviorConfig
+    }, timeout)
+    const initialFetchConfig = getResolvedFetchConfig(options.timeout)
+
+    if (import.meta.dev && import.meta.client && this.showLogs) {
+      const logConfig = Object.fromEntries(Object.entries({
+        baseURL: initialFetchConfig.baseURL,
+        cache: initialFetchConfig.cache,
+        headers: initialFetchConfig.headers,
+        key: toValue(resolvedConfig.key),
+        method: initialFetchConfig.method,
+        params: initialFetchConfig.params,
+        query: initialFetchConfig.query
+      }).filter(([, value]) => value !== undefined))
+
+      let bodyLogs
+      try {
+        bodyLogs = serialize(initialFetchConfig.body)
+      }
+      catch (error) {
+        console.warn('[Custom Fetch] couldn\'t serialize [Body]:', error)
+      }
+      console.warn([
+        '———————————— [Custom Fetch] ————————————',
+        `[Request URL]: ${url}`,
+        '',
+        `[Query]: ${serialize(logConfig)}`,
+        '',
+        `[Body]: ${bodyLogs}`,
+        '————————————————————————————————————'
+      ].join('\n'))
+    }
 
     const defaultOptions = {
       async onRequest (ctx: FetchContext) {
@@ -269,12 +300,17 @@ export class CustomFetch {
     }
 
     const hashValue: Array<string | undefined | Record<string, unknown>> = ['custom_fetch:', url as string]
-    if (import.meta.dev && !config.key && (this.immutableKey || immutableKey)) {
+    const useImmutableKey = immutableKey ?? this.immutableKey
+
+    if (import.meta.dev && !config.key && useImmutableKey) {
       console.warn('[Custom Fetch] immutableKey is enabled, the key will be generated by hash([custom_fetch:, url])')
     }
 
-    if (!this.immutableKey && !immutableKey) {
-      hashValue.push(...generateOptionSegmentsWithConfig)
+    if (!useImmutableKey) {
+      hashValue.push(...generateOptionSegments({
+        ...initialFetchConfig,
+        method: initialFetchConfig.method ?? resolvedConfig.method
+      }))
     }
 
     const hashKey = hash(hashValue).replace(REPLACE_REG, '').slice(0, 10)
@@ -287,7 +323,7 @@ export class CustomFetch {
 
       return requestFetch(url as string, {
         ...defaultOptions,
-        ...resolveFetchConfig(_config, executeOptions.timeout ?? options.timeout),
+        ...getResolvedFetchConfig(executeOptions.timeout ?? options.timeout),
         signal: controller?.signal
       }) as unknown as Promise<ResT>
     }
@@ -444,6 +480,10 @@ export class CustomFetch {
         stopOptionWatch = watch(options.watch, async () => {
           await asyncData.refresh({ cause: 'watch' })
         }, { flush: 'post' })
+      }
+
+      if (!hasScope) {
+        pruneClientAsyncDataCache()
       }
 
       if (hasScope) {
