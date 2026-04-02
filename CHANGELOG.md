@@ -1,5 +1,17 @@
 # nuxt-custom-fetch
 
+## v4.4.0
+
+[compare changes](https://github.com/xjccc/nuxt-custom-fetch/compare/v4.1.1...v4.4.0)
+
+### 🚀 Enhancements
+
+- Align custom fetch with Nuxt 4 async data ([#113](https://github.com/xjccc/nuxt-custom-fetch/pull/113))
+
+### ❤️ Contributors
+
+- Xjccc ([@xjccc](https://github.com/xjccc))
+
 ## v4.1.1
 
 [compare changes](https://github.com/xjccc/nuxt-custom-fetch/compare/v4.0.1...v4.1.1)
