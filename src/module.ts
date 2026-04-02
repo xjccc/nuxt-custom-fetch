@@ -7,7 +7,7 @@ export default defineNuxtModule<ModuleOptions>({
   meta: {
     name: 'nuxt-custom-fetch',
     configKey: 'customFetch',
-    version: '>=3.17.0'
+    version: '>=4.4.0'
   },
   defaults: {},
   setup (options, nuxt) {

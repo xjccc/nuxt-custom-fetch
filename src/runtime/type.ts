@@ -3,6 +3,21 @@ import type { FetchOptions } from 'ofetch'
 
 export type { FetchContext, FetchResponse } from 'ofetch'
 
+type NativeFetchValue = ArrayBuffer | Blob | Date | File | FormData | Headers | Request | URLSearchParams
+
+export type MaybeRefDeep<T>
+  = T extends (...args: any[]) => any
+    ? T
+    : T extends NativeFetchValue
+      ? MaybeRefOrGetter<T>
+      : T extends Array<infer U>
+        ? MaybeRefOrGetter<Array<MaybeRefDeep<U>>>
+        : T extends ReadonlyArray<infer U>
+          ? MaybeRefOrGetter<ReadonlyArray<MaybeRefDeep<U>>>
+          : T extends object
+            ? MaybeRefOrGetter<{ [K in keyof T]: MaybeRefDeep<T[K]> }>
+            : MaybeRefOrGetter<T>
+
 /** https://github.com/nuxt/nuxt/blob/edeb0759a455dbafd030f0b5ae1d5a39ad0dfc2a/packages/nuxt/src/app/composables/asyncData.ts#L20 */
 export type PickFrom<T, K extends Array<string>> = T extends Array<any>
   ? T
@@ -42,20 +57,33 @@ export type FetchMethod
     | 'trace'
     | undefined
 
-export interface CustomFetchOptions extends Omit<FetchOptions, 'method'> {
+export interface ResolvedCustomFetchOptions extends Omit<FetchOptions, 'method'> {
+  method?: FetchMethod
+}
+
+export interface CustomFetchOptions extends Omit<FetchOptions, 'method' | 'baseURL' | 'query' | 'params' | 'body' | 'headers' | 'cache'> {
   /** unique key for fetch */
   key?: MaybeRefOrGetter<string>
   /** hash key for fetch, with [customFetch: + url] without query */
   immutableKey?: boolean
   /** show logs */
   showLogs?: boolean
-  baseURL?: string
+  baseURL?: MaybeRefOrGetter<string>
+  query?: MaybeRefDeep<NonNullable<FetchOptions['query']>>
+  params?: MaybeRefDeep<NonNullable<FetchOptions['params']>>
+  body?: MaybeRefDeep<FetchOptions['body']>
+  headers?: MaybeRefDeep<NonNullable<FetchOptions['headers']>>
+  cache?: MaybeRefOrGetter<FetchOptions['cache']>
   /** is use handler to deal with query or pramas */
   useHandler?: boolean
   /** handler to deal with query or pramas */
-  handler?: (mergedObject: FetchOptions['params'] & FetchOptions['query']) => Record<string, any>
+  handler?: (mergedObject: Record<string, unknown>) => Record<string, unknown>
   /** offline handler */
   offline?: () => void
+}
+
+export interface CustomFetchRequestOptions extends CustomFetchOptions {
+  method: FetchMethod
 }
 
 export interface Interceptors {
