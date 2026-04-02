@@ -111,7 +111,7 @@ const search = async () => {
   const { data, status } = await ajax.get<{
     data: number[]
     nums: number
-  }>('/api/get-list', {
+  }>('/get-list', {
     params: {
       scene: 'inventory'
     },

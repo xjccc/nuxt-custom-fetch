@@ -9,21 +9,31 @@ describe('noop', () => {
 })
 
 describe('resolveReactiveValue', () => {
-  it('deeply unwraps refs in arrays and plain objects', () => {
+  it('deeply unwraps refs and getters in arrays and plain objects', () => {
     const payload = {
       user: ref('Ada'),
+      page: () => 1,
       nested: {
-        count: ref(2)
+        count: ref(2),
+        auth: () => 'Bearer token'
       },
-      tags: [ref('nuxt'), { ok: ref(true) }]
+      tags: [ref('nuxt'), () => 'fetch', {
+        ok: ref(true),
+        enabled: () => false
+      }]
     }
 
     expect(resolveReactiveValue(payload)).toEqual({
       user: 'Ada',
+      page: 1,
       nested: {
-        count: 2
+        count: 2,
+        auth: 'Bearer token'
       },
-      tags: ['nuxt', { ok: true }]
+      tags: ['nuxt', 'fetch', {
+        ok: true,
+        enabled: false
+      }]
     })
   })
 
@@ -114,18 +124,18 @@ describe('generateOptionSegments', () => {
     ])
   })
 
-  it('deeply unwraps nested reactive params and query values', () => {
+  it('deeply unwraps nested reactive params, query, and getter values', () => {
     const segments = generateOptionSegments({
       method: 'GET',
       params: {
         filters: {
-          page: ref(2),
-          tags: [ref('latest')]
+          page: () => 2,
+          tags: [ref('latest'), () => 'hot']
         }
       },
       query: {
         cursor: {
-          after: ref('abc')
+          after: () => 'abc'
         }
       }
     })
@@ -136,7 +146,7 @@ describe('generateOptionSegments', () => {
       {
         filters: {
           page: 2,
-          tags: ['latest']
+          tags: ['latest', 'hot']
         }
       },
       {
@@ -147,12 +157,13 @@ describe('generateOptionSegments', () => {
     ])
   })
 
-  it('hashes plain object bodies after deep unwrapping refs', () => {
+  it('hashes plain object bodies after deep unwrapping refs and getters', () => {
     const body = {
       profile: {
-        name: ref('Ada')
+        name: ref('Ada'),
+        role: () => 'admin'
       },
-      tags: [ref('nuxt')]
+      tags: [ref('nuxt'), () => 'fetch']
     }
 
     const segments = generateOptionSegments({

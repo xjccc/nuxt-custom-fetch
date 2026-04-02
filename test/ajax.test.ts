@@ -90,6 +90,56 @@ describe('customFetch', () => {
     expect(requestOnRequest).toHaveBeenCalledTimes(1)
   })
 
+  it('resolves nested getter values before sending request config', async () => {
+    const requestFetch = vi.fn().mockResolvedValue({ ok: true })
+
+    __setRequestFetchImpl(requestFetch)
+    __setUseAsyncDataImpl(async (_key, handler) => {
+      return createAsyncDataResult(await handler({}, {
+        signal: new AbortController().signal
+      }))
+    })
+
+    const ajax = new CustomFetch({
+      baseURL: '/api',
+      showLogs: false
+    })
+
+    await ajax.post<{ ok: boolean }>('/hello', {
+      headers: {
+        authorization: () => 'Bearer token'
+      },
+      body: {
+        profile: {
+          name: () => 'Ada'
+        }
+      },
+      query: {
+        cursor: {
+          after: () => 'abc'
+        }
+      }
+    })
+
+    const [, fetchOptions] = requestFetch.mock.calls[0] as [string, Record<string, any>]
+
+    expect(fetchOptions).toMatchObject({
+      headers: {
+        authorization: 'Bearer token'
+      },
+      body: {
+        profile: {
+          name: 'Ada'
+        }
+      },
+      query: {
+        cursor: {
+          after: 'abc'
+        }
+      }
+    })
+  })
+
   it('calls the offline handler when navigator is offline on the client', async () => {
     const requestFetch = vi.fn().mockResolvedValue({ ok: true })
     const offline = vi.fn()

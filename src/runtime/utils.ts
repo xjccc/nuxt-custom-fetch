@@ -1,6 +1,6 @@
 import type { MaybeRef } from '#imports'
 import type { CustomFetchOptions, FetchMethod, MaybeRefDeep } from './type'
-import { toValue, unref } from '#imports'
+import { toValue } from '#imports'
 import { isPlainObject } from '@vue/shared'
 import { hash } from 'ohash'
 
@@ -60,7 +60,7 @@ function isSpecialNativeValue (value: unknown): value is ArrayBuffer | Blob | Da
 export function resolveReactiveValue<T> (value: MaybeRefDeep<T>): T
 export function resolveReactiveValue<T> (value: T): T
 export function resolveReactiveValue<T> (value: T) {
-  const resolvedValue = unref(value)
+  const resolvedValue = toValue(value)
 
   if (resolvedValue !== value) {
     return resolveReactiveValue(resolvedValue)

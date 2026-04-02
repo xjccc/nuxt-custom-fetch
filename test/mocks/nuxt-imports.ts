@@ -22,16 +22,20 @@ function isRefLike<T> (value: unknown): value is MockRef<T> {
   return typeof value === 'object' && value !== null && 'value' in value
 }
 
-function unwrap<T> (value: T): T {
-  if (typeof value === 'function') {
-    return (value as () => T)()
-  }
-
+function unwrapRef<T> (value: T): T {
   if (isRefLike(value)) {
     return value.value as T
   }
 
   return value
+}
+
+function unwrapValue<T> (value: T): T {
+  if (typeof value === 'function') {
+    return (value as () => T)()
+  }
+
+  return unwrapRef(value)
 }
 
 function createInitialState () {
@@ -125,11 +129,11 @@ export function ref<T> (value: T): MockRef<T> {
 export const shallowRef = ref
 
 export function toValue<T> (value: T): T {
-  return unwrap(value)
+  return unwrapValue(value)
 }
 
 export function unref<T> (value: T): T {
-  return unwrap(value)
+  return unwrapRef(value)
 }
 
 export function useAsyncData (...args: Parameters<UseAsyncDataImpl>) {
