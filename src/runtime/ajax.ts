@@ -201,7 +201,7 @@ export class CustomFetch {
     const runtimeConfig = useRuntimeConfig() as RuntimeConfigWithApp
     const resolvedConfig: CustomFetchRequestOptions = {
       ...config,
-      baseURL: config.baseURL ?? (this.baseURL || runtimeConfig.app?.baseURL || '')
+      baseURL: config.baseURL ?? (toValue(this.baseURL) || runtimeConfig.app?.baseURL || '')
     }
 
     const {
@@ -217,9 +217,11 @@ export class CustomFetch {
       useHandler: _useHandler,
       ...fetchConfig
     } = resolvedConfig
+    const offlineHandler = _offline ?? this.offline
+    const showLogs = _showLogs ?? this.showLogs
 
     if (import.meta.client && typeof navigator !== 'undefined' && !navigator.onLine) {
-      this.offline()
+      offlineHandler()
     }
 
     const interceptors = this._interceptors
@@ -235,7 +237,7 @@ export class CustomFetch {
     }, timeout)
     const initialFetchConfig = getResolvedFetchConfig(options.timeout)
 
-    if (import.meta.dev && import.meta.client && this.showLogs) {
+    if (import.meta.dev && import.meta.client && showLogs) {
       const logConfig = Object.fromEntries(Object.entries({
         baseURL: initialFetchConfig.baseURL,
         cache: initialFetchConfig.cache,

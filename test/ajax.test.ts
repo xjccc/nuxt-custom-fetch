@@ -168,6 +168,38 @@ describe('customFetch', () => {
     expect(offline).toHaveBeenCalledTimes(1)
   })
 
+  it('prefers request-level offline handler over the instance handler', async () => {
+    const requestFetch = vi.fn().mockResolvedValue({ ok: true })
+    const instanceOffline = vi.fn()
+    const requestOffline = vi.fn()
+
+    Object.defineProperty(globalThis.navigator, 'onLine', {
+      configurable: true,
+      value: false
+    })
+
+    __setRequestFetchImpl(requestFetch)
+    __setUseAsyncDataImpl(async (_key, handler) => {
+      return createAsyncDataResult(await handler({}, {
+        signal: new AbortController().signal
+      }))
+    })
+
+    const ajax = new CustomFetch({
+      baseURL: '/api',
+      offline: instanceOffline,
+      showLogs: false
+    })
+
+    const { data } = await ajax.get<{ ok: boolean }>('/hello', {
+      offline: requestOffline
+    })
+
+    expect(data.value).toEqual({ ok: true })
+    expect(requestOffline).toHaveBeenCalledTimes(1)
+    expect(instanceOffline).not.toHaveBeenCalled()
+  })
+
   it('skips the offline check when navigator is unavailable', async () => {
     const requestFetch = vi.fn().mockResolvedValue({ ok: true })
     const offline = vi.fn()
@@ -247,6 +279,32 @@ describe('customFetch', () => {
       params: {
         page: 1
       }
+    })
+
+    expect(warn).not.toHaveBeenCalled()
+  })
+
+  it('lets request showLogs override the instance setting', async () => {
+    const requestFetch = vi.fn().mockResolvedValue({ ok: true })
+    const warn = vi.spyOn(console, 'warn')
+
+    __setRequestFetchImpl(requestFetch)
+    __setUseAsyncDataImpl(async (_key, handler) => {
+      return createAsyncDataResult(await handler({}, {
+        signal: new AbortController().signal
+      }))
+    })
+
+    const ajax = new CustomFetch({
+      baseURL: '/api',
+      showLogs: true
+    })
+
+    await ajax.get<{ ok: boolean }>('/hello', {
+      params: {
+        page: 1
+      },
+      showLogs: false
     })
 
     expect(warn).not.toHaveBeenCalled()
@@ -723,6 +781,33 @@ describe('customFetch', () => {
     const { data } = await ajax.get<{ ok: boolean }>('/runtime')
 
     expect(data.value).toEqual({ ok: true })
+    expect(requestFetch).toHaveBeenCalledWith('/runtime', expect.objectContaining({
+      baseURL: '/runtime-base',
+      method: 'GET'
+    }))
+  })
+
+  it('uses runtime config baseURL when instance baseURL resolves to an empty string', async () => {
+    const requestFetch = vi.fn().mockResolvedValue({ ok: true })
+
+    __setRuntimeConfig({
+      app: {
+        baseURL: '/runtime-base'
+      }
+    })
+    __setRequestFetchImpl(requestFetch)
+    __setUseAsyncDataImpl(async (_key, handler) => {
+      return createAsyncDataResult(await handler({}, {
+        signal: new AbortController().signal
+      }))
+    })
+
+    const ajax = new CustomFetch({
+      baseURL: ref('')
+    })
+
+    await ajax.get<{ ok: boolean }>('/runtime')
+
     expect(requestFetch).toHaveBeenCalledWith('/runtime', expect.objectContaining({
       baseURL: '/runtime-base',
       method: 'GET'
