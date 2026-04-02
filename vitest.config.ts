@@ -2,8 +2,8 @@ import { fileURLToPath } from 'node:url'
 
 export default {
   define: {
-    'import.meta.client': 'true',
-    'import.meta.dev': 'true'
+    'import.meta.client': true,
+    'import.meta.dev': true
   },
   resolve: {
     alias: {
