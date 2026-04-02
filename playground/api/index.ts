@@ -1,15 +1,17 @@
-import type { Ref } from '#imports'
+import type { MaybeRefOrGetter, Ref } from '#imports'
 import { CustomFetch } from '#imports'
 
 const ajax = new CustomFetch({ baseURL: '/api' })
 
-export const exampleApi = (params: Record<string, unknown>) =>
+export const getGreeting = (params: Record<string, unknown>) =>
   ajax.get<string>('/hello', {
     params
   })
 
-export const exampleApi2 = (key: string | Ref<string>, {
+export const getGreetingByUserId = (key: MaybeRefOrGetter<string>, {
   userId = 1
+}: {
+  userId?: MaybeRefOrGetter<number>
 }) => {
   return ajax.get<string>('/hello', {
     key,
@@ -17,24 +19,25 @@ export const exampleApi2 = (key: string | Ref<string>, {
       userId
     }
   }, {
-    default: () => 11
+    default: () => '11'
   })
 }
-export function getListReactive (page: Ref<number>) {
+
+export function getReactivePageList (page: Ref<number>) {
   return ajax.get<{
     data: number[]
     nums: number
   }>('/get-list', { params: { page } }, { watch: [() => page.value] })
 }
 
-export function getList (page: number) {
+export function getPageList (page: number) {
   return ajax.get<{
     data: number[]
     nums: number
   }>('/get-list', { params: { page } })
 }
 
-export function getNum (page: number) {
+export function getDelayedPageMetric (page: number) {
   return ajax.get<{
     data: number[]
     nums: number
