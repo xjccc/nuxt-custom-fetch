@@ -3,8 +3,8 @@ import type { NitroFetchRequest } from 'nitro/types'
 import type { AsyncData, AsyncDataOptions, NuxtError } from 'nuxt/app'
 import type { CustomFetchOptions, CustomFetchRequestOptions, FetchContext, FetchResponse, Interceptors, KeysOf, PickFrom, ResolvedCustomFetchOptions } from './type'
 // @ts-expect-error virtual file
-import { asyncDataDefaults } from '#build/nuxt.config.mjs'
-import { clearNuxtData, computed, createError, getCurrentScope, onScopeDispose, reactive, ref, shallowRef, toValue, unref, useAsyncData, useNuxtApp, useRequestFetch, useRuntimeConfig, watch } from '#imports'
+import { asyncDataDefaults, granularCachedData, pendingWhenIdle } from '#build/nuxt.config.mjs'
+import { clearNuxtData, computed, createError, getCurrentScope, isRef, onScopeDispose, reactive, ref, shallowRef, toValue, unref, useAsyncData, useNuxtApp, useRequestFetch, useRuntimeConfig, watch } from '#imports'
 import { hash, serialize } from 'ohash'
 import { generateOptionSegments, Noop, pick, resolveReactiveValue } from './utils'
 
@@ -37,6 +37,14 @@ interface NuxtAppWithAsyncData {
     _deps?: number
     execute?: (opts?: AsyncDataExecuteOptions) => Promise<unknown>
   } | undefined>
+  payload?: {
+    data?: Record<string, unknown>
+    _errors?: Record<string, unknown>
+  }
+  static?: {
+    data?: Record<string, unknown>
+  }
+  hook?: (name: string, callback: (...args: any[]) => unknown) => (() => void)
 }
 
 interface ClientAsyncDataEntry {
@@ -71,11 +79,37 @@ function linkAbortSignal (signal: AbortSignal | undefined, controller: AbortCont
   }
 
   if (signal.aborted) {
-    controller.abort()
+    controller.abort((signal as AbortSignal).reason)
     return
   }
 
-  signal.addEventListener('abort', () => controller.abort(), { once: true })
+  signal.addEventListener('abort', () => controller.abort((signal as AbortSignal).reason), { once: true })
+}
+
+/**
+ * Merge the provided signals (plus an optional timeout) into a single signal,
+ * mirroring Nuxt's `mergeAbortSignals`. Always backed by a dedicated controller
+ * so the request still receives an abort signal when the async-data context does
+ * not provide one, and returns `undefined` when `AbortController` is unavailable.
+ */
+function createMergedSignal (signals: Array<AbortSignal | undefined>, timeout?: number) {
+  const controller = createAbortController()
+
+  if (!controller) {
+    return undefined
+  }
+
+  const sources = signals.filter((signal): signal is AbortSignal => !!signal)
+
+  if (typeof timeout === 'number' && timeout >= 0 && typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function') {
+    sources.push(AbortSignal.timeout(timeout))
+  }
+
+  for (const signal of sources) {
+    linkAbortSignal(signal, controller)
+  }
+
+  return controller.signal
 }
 
 function shouldFallbackToClientAsyncData (error: unknown) {
@@ -163,7 +197,8 @@ export class CustomFetch {
     const baseConfig = this.baseConfig(config)
     const baseURL = toValue(rawConfig.baseURL)
     const body = resolveReactiveValue<ResolvedRequestFetchOptions['body']>(toValue(rawConfig.body))
-    const cache = toValue(rawConfig.cache)
+    const _cache = toValue(rawConfig.cache)
+    const cache = typeof _cache === 'boolean' ? undefined : _cache
     const headers = resolveReactiveValue<ResolvedRequestFetchOptions['headers']>(toValue(rawConfig.headers))
     const method = toValue(rawConfig.method)
     const params = resolveReactiveValue<ResolvedRequestFetchOptions['params']>(toValue(baseConfig.params ?? rawConfig.params))
@@ -320,13 +355,13 @@ export class CustomFetch {
     const key = computed(() => toValue(resolvedConfig.key) || hashKey)
 
     const executeRequest = (executeOptions: AsyncDataExecuteOptions = {}) => {
-      const controller = createAbortController()
-      linkAbortSignal(executeOptions.signal, controller)
+      const timeout = executeOptions.timeout ?? options.timeout
+      const signal = createMergedSignal([executeOptions.signal], timeout)
 
       return requestFetch(url as string, {
         ...defaultOptions,
-        ...getResolvedFetchConfig(executeOptions.timeout ?? options.timeout),
-        signal: controller?.signal
+        ...getResolvedFetchConfig(timeout),
+        signal
       }) as unknown as Promise<ResT>
     }
 
@@ -337,8 +372,11 @@ export class CustomFetch {
       })
     }
 
+    const nuxtApp = useNuxtApp() as NuxtAppWithAsyncData
+
     const createClientAsyncDataFallback = (): CustomFetchReturnValue<DataT, PickKeys, DefaultT, NuxtErrorDataT> => {
       const _ref = options.deep ? ref : shallowRef
+      const usePendingRef = pendingWhenIdle
       const getDefaultValue = () => {
         if (options.default) {
           return unref(options.default()) as CustomFetchData<DataT, PickKeys, DefaultT>
@@ -347,24 +385,65 @@ export class CustomFetch {
         return asyncDataDefaults.value as CustomFetchData<DataT, PickKeys, DefaultT>
       }
 
+      const resolveCachedData = (cause: AsyncDataRefreshCause = 'refresh:manual') => {
+        if (options.getCachedData) {
+          return options.getCachedData(key.value, nuxtApp as any, { cause }) as CustomFetchData<DataT, PickKeys, DefaultT> | undefined
+        }
+
+        if (nuxtApp.isHydrating) {
+          return nuxtApp.payload?.data?.[key.value] as CustomFetchData<DataT, PickKeys, DefaultT> | undefined
+        }
+
+        if (cause !== 'refresh:manual' && cause !== 'refresh:hook') {
+          return nuxtApp.static?.data?.[key.value] as CustomFetchData<DataT, PickKeys, DefaultT> | undefined
+        }
+
+        return undefined
+      }
+
+      const writePayloadData = (value: CustomFetchData<DataT, PickKeys, DefaultT>) => {
+        if (nuxtApp.payload?.data) {
+          nuxtApp.payload.data[key.value] = value
+        }
+      }
+
+      const isKeyReactive = isRef(resolvedConfig.key) || typeof resolvedConfig.key === 'function'
+
       let activeController: AbortController | undefined
       let activeRequest: Promise<void> | undefined
       let requestId = 0
+      let hasData = false
+      let keyChanging = false
       let stopKeyWatch: (() => void) | undefined
       let stopOptionWatch: (() => void) | undefined
+      let stopRefreshHook: (() => void) | undefined
+
+      const initialStatus = options.immediate === false ? 'idle' : 'pending'
+      const statusRef = _ref(initialStatus) as Ref<'idle' | 'pending' | 'success' | 'error'>
+      const pendingRef = (usePendingRef
+        ? _ref(initialStatus === 'pending')
+        : computed(() => statusRef.value === 'pending')) as Ref<boolean>
+
+      const setPending = (value: boolean) => {
+        if (usePendingRef) {
+          pendingRef.value = value
+        }
+      }
 
       const stopWatchers = () => {
         stopKeyWatch?.()
         stopKeyWatch = undefined
         stopOptionWatch?.()
         stopOptionWatch = undefined
+        stopRefreshHook?.()
+        stopRefreshHook = undefined
       }
 
       const asyncData: CustomFetchAsyncDataState<DataT, PickKeys, DefaultT, NuxtErrorDataT> = {
         data: _ref(getDefaultValue()) as Ref<CustomFetchData<DataT, PickKeys, DefaultT>>,
         error: _ref(asyncDataDefaults.errorValue) as Ref<CustomFetchError<NuxtErrorDataT>>,
-        status: _ref(options.immediate === false ? 'idle' : 'pending'),
-        pending: _ref(options.immediate !== false),
+        status: statusRef,
+        pending: pendingRef,
         clear: () => {
           stopWatchers()
           activeController?.abort()
@@ -372,16 +451,18 @@ export class CustomFetch {
           if (_cachedClientAsyncData.get(key.value) === asyncData) {
             _cachedClientAsyncData.delete(key.value)
           }
+          hasData = false
           asyncData.data.value = getDefaultValue()
           asyncData.error.value = asyncDataDefaults.errorValue
           asyncData.status.value = 'idle'
-          asyncData.pending.value = false
+          setPending(false)
           clearNuxtData(key.value)
         },
         refresh: async (executeOptions?: AsyncDataExecuteOptions) => {
           await asyncData.execute(executeOptions)
         },
         execute: async (executeOptions?: AsyncDataExecuteOptions) => {
+          const cause = executeOptions?.cause
           const dedupe = executeOptions?.dedupe ?? options.dedupe ?? 'cancel'
           if (activeRequest) {
             if (dedupe === 'defer') {
@@ -389,6 +470,19 @@ export class CustomFetch {
             }
 
             activeController?.abort()
+          }
+
+          if (granularCachedData || cause === 'initial' || nuxtApp.isHydrating) {
+            const cachedData = resolveCachedData(cause)
+            if (cachedData !== undefined) {
+              writePayloadData(cachedData)
+              hasData = true
+              asyncData.data.value = cachedData
+              asyncData.error.value = asyncDataDefaults.errorValue
+              asyncData.status.value = 'success'
+              setPending(false)
+              return
+            }
           }
 
           const currentRequestId = ++requestId
@@ -400,7 +494,7 @@ export class CustomFetch {
             _cachedController.set(key.value, controller)
           }
 
-          asyncData.pending.value = true
+          setPending(true)
           asyncData.status.value = 'pending'
           asyncData.error.value = asyncDataDefaults.errorValue
 
@@ -423,7 +517,10 @@ export class CustomFetch {
                 finalData = pick(data as Record<string, any>, options.pick as string[]) as PickFrom<DataT, PickKeys>
               }
 
-              asyncData.data.value = finalData as CustomFetchData<DataT, PickKeys, DefaultT>
+              const value = finalData as CustomFetchData<DataT, PickKeys, DefaultT>
+              writePayloadData(value)
+              hasData = true
+              asyncData.data.value = value
               asyncData.error.value = asyncDataDefaults.errorValue
               asyncData.status.value = 'success'
             })
@@ -432,6 +529,7 @@ export class CustomFetch {
                 return
               }
 
+              hasData = false
               asyncData.error.value = createError(error) as CustomFetchError<NuxtErrorDataT>
               asyncData.data.value = getDefaultValue()
               asyncData.status.value = 'error'
@@ -449,7 +547,7 @@ export class CustomFetch {
                 asyncData.status.value = 'idle'
               }
 
-              asyncData.pending.value = false
+              setPending(false)
             })
 
           await activeRequest
@@ -458,28 +556,51 @@ export class CustomFetch {
 
       _cachedClientAsyncData.set(key.value, asyncData as ClientAsyncDataEntry)
 
-      stopKeyWatch = watch(key, (newKey, oldKey) => {
-        if (oldKey) {
-          _cachedController.get(oldKey)?.abort?.()
-          _cachedController.delete(oldKey)
-
-          if (_cachedClientAsyncData.get(oldKey) === asyncData) {
-            _cachedClientAsyncData.delete(oldKey)
-          }
-        }
-
-        if (newKey !== oldKey) {
-          _cachedClientAsyncData.set(newKey, asyncData as ClientAsyncDataEntry)
-        }
-
-        if (newKey !== oldKey && options.immediate !== false) {
-          void asyncData.execute({ cause: 'watch' })
+      stopRefreshHook = nuxtApp.hook?.('app:data:refresh', async (keys?: string[]) => {
+        if (!keys || keys.includes(key.value)) {
+          await asyncData.execute({ cause: 'refresh:hook' })
         }
       })
+
+      if (isKeyReactive) {
+        stopKeyWatch = watch(key, (newKey, oldKey) => {
+          if (!((newKey || oldKey) && newKey !== oldKey)) {
+            return
+          }
+
+          keyChanging = true
+          const hadData = hasData
+          const wasRunning = activeRequest !== undefined
+
+          if (oldKey) {
+            _cachedController.get(oldKey)?.abort?.()
+            _cachedController.delete(oldKey)
+
+            if (_cachedClientAsyncData.get(oldKey) === asyncData) {
+              _cachedClientAsyncData.delete(oldKey)
+            }
+          }
+
+          _cachedClientAsyncData.set(newKey, asyncData as ClientAsyncDataEntry)
+
+          const keyTriggersExecute = (options as { _keyTriggersExecute?: boolean })._keyTriggersExecute !== false
+          if (keyTriggersExecute && (options.immediate !== false || hadData || wasRunning)) {
+            void asyncData.execute({ cause: 'watch' })
+          }
+
+          void Promise.resolve().then(() => {
+            keyChanging = false
+          })
+        }, { flush: 'sync' })
+      }
 
       const hasScope = getCurrentScope()
       if (options.watch) {
         stopOptionWatch = watch(options.watch, async () => {
+          if (keyChanging) {
+            return
+          }
+
           await asyncData.refresh({ cause: 'watch' })
         }, { flush: 'post' })
       }
@@ -499,7 +620,6 @@ export class CustomFetch {
       return asyncData.execute({ cause: 'initial' }).then(() => asyncData) as CustomFetchReturnValue<DataT, PickKeys, DefaultT, NuxtErrorDataT>
     }
 
-    const nuxtApp = useNuxtApp() as NuxtAppWithAsyncData
     const sharedAsyncData = nuxtApp._asyncData?.[key.value]
     const cachedClientAsyncData = _cachedClientAsyncData.get(key.value)
 
