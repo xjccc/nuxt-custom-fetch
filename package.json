@@ -75,6 +75,6 @@
     }
   },
   "nano-staged": {
-    "*": "eslint . --fix"
+    "*": "eslint --fix"
   }
 }
