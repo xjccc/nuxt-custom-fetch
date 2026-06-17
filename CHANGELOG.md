@@ -1,5 +1,24 @@
 # nuxt-custom-fetch
 
+## v4.4.8
+
+[compare changes](https://github.com/xjccc/nuxt-custom-fetch/compare/v4.4.0...v4.4.8)
+
+### 🚀 Enhancements
+
+- Align client fallback with Nuxt 4 async-data behavior ([#122](https://github.com/xjccc/nuxt-custom-fetch/pull/122))
+
+### 🏡 Chore
+
+- Vue/nuxt -> peerDependencies ([#115](https://github.com/xjccc/nuxt-custom-fetch/pull/115))
+- Update deps ([62bd0b9](https://github.com/xjccc/nuxt-custom-fetch/commit/62bd0b9))
+- Update pnpm@11.7 ([1366f72](https://github.com/xjccc/nuxt-custom-fetch/commit/1366f72))
+- Ignore ([660614a](https://github.com/xjccc/nuxt-custom-fetch/commit/660614a))
+
+### ❤️ Contributors
+
+- Xjccc ([@xjccc](https://github.com/xjccc))
+
 ## v4.4.0
 
 [compare changes](https://github.com/xjccc/nuxt-custom-fetch/compare/v4.1.1...v4.4.0)
