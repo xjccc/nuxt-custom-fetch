@@ -10,12 +10,23 @@ interface WatchCall {
 
 type UseAsyncDataImpl = (...args: any[]) => any
 type RequestFetchImpl = (...args: any[]) => Promise<unknown>
+type HookCallback = (...args: any[]) => unknown
 interface NuxtAppState {
   isHydrating: boolean
   _asyncData: Record<string, {
     _deps?: number
     execute?: (opts?: unknown) => Promise<unknown>
   } | undefined>
+  payload: {
+    data: Record<string, unknown>
+    _errors: Record<string, unknown>
+  }
+  static: {
+    data: Record<string, unknown>
+  }
+  _hooks: Record<string, Set<HookCallback>>
+  hook: (name: string, callback: HookCallback) => () => void
+  callHook: (name: string, ...args: unknown[]) => Promise<void>
 }
 
 function isRefLike<T> (value: unknown): value is MockRef<T> {
@@ -38,13 +49,38 @@ function unwrapValue<T> (value: T): T {
   return unwrapRef(value)
 }
 
+function createNuxtApp (): NuxtAppState {
+  const _hooks: Record<string, Set<HookCallback>> = {}
+
+  return {
+    isHydrating: true,
+    _asyncData: {},
+    payload: {
+      data: {},
+      _errors: {}
+    },
+    static: {
+      data: {}
+    },
+    _hooks,
+    hook (name: string, callback: HookCallback) {
+      (_hooks[name] ??= new Set()).add(callback)
+      return () => {
+        _hooks[name]?.delete(callback)
+      }
+    },
+    async callHook (name: string, ...args: unknown[]) {
+      for (const callback of _hooks[name] ?? []) {
+        await callback(...args)
+      }
+    }
+  }
+}
+
 function createInitialState () {
   return {
     runtimeConfig: { app: { baseURL: '/runtime-base' } },
-    nuxtApp: {
-      isHydrating: true,
-      _asyncData: {}
-    } as NuxtAppState,
+    nuxtApp: createNuxtApp(),
     requestFetch: (async () => undefined) as RequestFetchImpl,
     useAsyncData: (async (key: unknown, handler: unknown, options: unknown) => ({
       key,
@@ -78,8 +114,14 @@ export function __setRuntimeConfig (runtimeConfig: typeof state.runtimeConfig) {
   state.runtimeConfig = runtimeConfig
 }
 
-export function __setNuxtApp (nuxtApp: typeof state.nuxtApp) {
-  state.nuxtApp = nuxtApp
+export function __setNuxtApp (nuxtApp: Partial<NuxtAppState> & Pick<NuxtAppState, 'isHydrating' | '_asyncData'>) {
+  const base = createNuxtApp()
+  state.nuxtApp = {
+    ...base,
+    ...nuxtApp,
+    payload: nuxtApp.payload ?? base.payload,
+    static: nuxtApp.static ?? base.static
+  }
 }
 
 export function __setUseAsyncDataImpl (implementation: UseAsyncDataImpl) {
@@ -120,6 +162,10 @@ export function onScopeDispose (callback: () => void) {
 
 export function reactive<T extends object> (value: T) {
   return value
+}
+
+export function isRef (value: unknown): boolean {
+  return isRefLike(value)
 }
 
 export function ref<T> (value: T): MockRef<T> {

@@ -26,6 +26,8 @@ The current implementation is maintained around these guarantees:
 - reactive `key`, `baseURL`, `params`, `query`, `headers`, `body`, and `cache` values are resolved before each request
 - generated keys include both `params` and `query`, which avoids stale client reuse when only one side changes
 - same-key client compatibility requests share one async-data bucket, so `dedupe: 'cancel'` can abort the previous pending request
+- the client compatibility path mirrors Nuxt 4 async-data behavior: `pending` follows the `pendingWhenIdle` config, `refreshNuxtData()` (the `app:data:refresh` hook) re-runs fallback requests, `getCachedData` is honored and successful data is written back to `nuxtApp.payload.data`
+- timeouts and external abort signals are merged into one request signal (via `AbortSignal.timeout`/`AbortSignal.any` semantics), key watchers are only created for reactive keys, and a key change re-runs the request when `immediate`, prior data, or an in-flight request is present
 - Vitest runtime tests and TypeScript type tests cover the wrapper behavior
 
 ## When To Use This Module
@@ -103,8 +105,8 @@ Always `await` `ajax.get`, `ajax.post`, and `ajax.request` in setup-compatible c
 ## Reactive Example
 
 ```ts
-import { computed, ref } from 'vue'
 import { CustomFetch } from '#imports'
+import { computed, ref } from 'vue'
 
 const ajax = new CustomFetch({ baseURL: '/api' })
 
@@ -142,7 +144,7 @@ export const getGreetingByUserId = (key: MaybeRefOrGetter<string>, { userId = 1 
     default: () => '11'
   })
 
-export function getReactivePageList(page: Ref<number>) {
+export function getReactivePageList (page: Ref<number>) {
   return ajax.get<{ data: number[], nums: number }>('/get-list', {
     params: { page }
   }, {

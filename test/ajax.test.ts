@@ -2,7 +2,7 @@ import type { AsyncDataOptions } from 'nuxt/app'
 import { ref } from '#imports'
 import { computed } from 'vue'
 import { CustomFetch } from '../src/runtime/ajax'
-import { asyncDataDefaults } from './mocks/nuxt-config'
+import { __setPendingWhenIdle, asyncDataDefaults } from './mocks/nuxt-config'
 import { __getNuxtMockState, __setNuxtApp, __setRequestFetchImpl, __setRuntimeConfig, __setUseAsyncDataImpl } from './mocks/nuxt-imports'
 
 function createAsyncDataResult<DataT> (data: DataT) {
@@ -895,6 +895,10 @@ describe('customFetch', () => {
     const page = ref(1)
     const search = ref('nuxt')
 
+    __setNuxtApp({
+      isHydrating: false,
+      _asyncData: {}
+    })
     __setRequestFetchImpl(requestFetch)
     __setUseAsyncDataImpl(() => {
       throw new Error('outside of a plugin')
@@ -1092,11 +1096,19 @@ describe('customFetch', () => {
         count: 3,
         extra: 'second'
       })
+      .mockResolvedValueOnce({
+        count: 4,
+        extra: 'third'
+      })
     const key = ref('fallback:1')
     const watchedSource = ref(1)
     const mockState = __getNuxtMockState()
 
     mockState.currentScope = {}
+    __setNuxtApp({
+      isHydrating: false,
+      _asyncData: {}
+    })
     __setRequestFetchImpl(requestFetch)
     __setUseAsyncDataImpl(() => {
       throw new Error('Component is already mounted')
@@ -1131,13 +1143,15 @@ describe('customFetch', () => {
     expect(asyncData.data.value).toEqual({ count: 2 })
     expect(asyncData.status.value).toBe('success')
 
+    // A key change re-runs the request when data already exists, matching
+    // Nuxt's `keyTriggersExecute && (immediate || hadData || wasRunning)` rule.
     key.value = 'fallback:2'
     await keyWatch?.callback('fallback:2', 'fallback:1')
-    expect(asyncData.data.value).toEqual({ count: 2 })
+    expect(asyncData.data.value).toEqual({ count: 3 })
 
     watchedSource.value = 2
     await sourceWatch?.callback()
-    expect(asyncData.data.value).toEqual({ count: 3 })
+    expect(asyncData.data.value).toEqual({ count: 4 })
 
     asyncData.clear()
     expect(asyncData.data.value).toEqual({ count: 0 })
@@ -1335,7 +1349,6 @@ describe('customFetch', () => {
     const requestFetch = vi.fn().mockResolvedValue({ count: 1 })
     const mockState = __getNuxtMockState()
     const entries: unknown[] = []
-    const initialWatchStopCalls = mockState.watchStopCalls
 
     __setRequestFetchImpl(requestFetch)
     __setUseAsyncDataImpl(() => {
@@ -1355,7 +1368,8 @@ describe('customFetch', () => {
       }))
     }
 
-    expect(mockState.watchStopCalls).toBeGreaterThan(initialWatchStopCalls)
+    // The oldest entry is cleared once the cache exceeds its cap.
+    expect(mockState.clearNuxtDataCalls).toContain('fallback:cache:0')
 
     const recreatedEntry = await ajax.get<{ count: number }>('/hello', {
       key: 'fallback:cache:0'
@@ -1453,5 +1467,139 @@ describe('customFetch', () => {
     })
 
     expect(() => ajax.get('/hello')).toThrow('boom')
+  })
+
+  it('refreshes fallback data when the app:data:refresh hook fires', async () => {
+    const requestFetch = vi
+      .fn()
+      .mockResolvedValueOnce({ count: 1 })
+      .mockResolvedValueOnce({ count: 2 })
+    const mockState = __getNuxtMockState()
+
+    __setNuxtApp({
+      isHydrating: false,
+      _asyncData: {}
+    })
+    __setRequestFetchImpl(requestFetch)
+    __setUseAsyncDataImpl(() => {
+      throw new Error('outside of a plugin')
+    })
+
+    const ajax = new CustomFetch({
+      baseURL: '/api',
+      showLogs: false
+    })
+    const asyncData = await ajax.get<{ count: number }>('/hello', {
+      key: 'hook:key'
+    }, {
+      default: () => ({ count: 0 })
+    })
+
+    expect(asyncData.data.value).toEqual({ count: 1 })
+
+    await mockState.nuxtApp.callHook('app:data:refresh', ['other:key'])
+    expect(asyncData.data.value).toEqual({ count: 1 })
+
+    await mockState.nuxtApp.callHook('app:data:refresh')
+    expect(asyncData.data.value).toEqual({ count: 2 })
+  })
+
+  it('serves getCachedData without fetching in the client fallback', async () => {
+    const requestFetch = vi.fn().mockResolvedValue({ count: 9 })
+
+    __setNuxtApp({
+      isHydrating: false,
+      _asyncData: {}
+    })
+    __setRequestFetchImpl(requestFetch)
+    __setUseAsyncDataImpl(() => {
+      throw new Error('outside of a plugin')
+    })
+
+    const ajax = new CustomFetch({
+      baseURL: '/api',
+      showLogs: false
+    })
+    const asyncData = await ajax.get<{ count: number }>('/hello', {
+      key: 'cache:key'
+    }, {
+      default: () => ({ count: 0 }),
+      getCachedData: () => ({ count: 42 })
+    })
+
+    expect(asyncData.data.value).toEqual({ count: 42 })
+    expect(asyncData.status.value).toBe('success')
+    expect(requestFetch).not.toHaveBeenCalled()
+  })
+
+  it('writes successful fallback data back to the nuxt payload', async () => {
+    const requestFetch = vi.fn().mockResolvedValue({ count: 7 })
+    const mockState = __getNuxtMockState()
+
+    __setNuxtApp({
+      isHydrating: false,
+      _asyncData: {}
+    })
+    __setRequestFetchImpl(requestFetch)
+    __setUseAsyncDataImpl(() => {
+      throw new Error('outside of a plugin')
+    })
+
+    const ajax = new CustomFetch({
+      baseURL: '/api',
+      showLogs: false
+    })
+    await ajax.get<{ count: number }>('/hello', {
+      key: 'payload:key'
+    }, {
+      default: () => ({ count: 0 })
+    })
+
+    expect(mockState.nuxtApp.payload.data['payload:key']).toEqual({ count: 7 })
+  })
+
+  it('uses a standalone pending ref when pendingWhenIdle is enabled', async () => {
+    __setPendingWhenIdle(true)
+
+    try {
+      let resolveRequest: ((value: { count: number }) => void) | undefined
+      const requestFetch = vi.fn(() => new Promise<{ count: number }>((resolve) => {
+        resolveRequest = resolve
+      }))
+
+      __setNuxtApp({
+        isHydrating: false,
+        _asyncData: {}
+      })
+      __setRequestFetchImpl(requestFetch)
+      __setUseAsyncDataImpl(() => {
+        throw new Error('outside of a plugin')
+      })
+
+      const ajax = new CustomFetch({
+        baseURL: '/api',
+        showLogs: false
+      })
+      const asyncData = await ajax.get<{ count: number }>('/hello', {
+        key: 'pending:key'
+      }, {
+        default: () => ({ count: 0 }),
+        immediate: false
+      })
+
+      expect(asyncData.pending.value).toBe(false)
+
+      const executePromise = asyncData.execute()
+      expect(asyncData.pending.value).toBe(true)
+
+      resolveRequest?.({ count: 1 })
+      await executePromise
+
+      expect(asyncData.pending.value).toBe(false)
+      expect(asyncData.status.value).toBe('success')
+    }
+    finally {
+      __setPendingWhenIdle(false)
+    }
   })
 })
