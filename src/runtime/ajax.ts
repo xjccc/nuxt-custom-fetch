@@ -1,11 +1,11 @@
-import type { Ref } from '#imports'
-import type { NitroFetchRequest } from 'nitro/types'
+import type { NitroFetchRequest } from 'nitropack'
 import type { AsyncData, AsyncDataOptions, NuxtError } from 'nuxt/app'
+import type { Ref } from '#imports'
 import type { CustomFetchOptions, CustomFetchRequestOptions, FetchContext, FetchResponse, Interceptors, KeysOf, PickFrom, ResolvedCustomFetchOptions } from './type'
+import { hash, serialize } from 'ohash'
 // @ts-expect-error virtual file
 import { asyncDataDefaults, granularCachedData, pendingWhenIdle } from '#build/nuxt.config.mjs'
 import { clearNuxtData, computed, createError, getCurrentScope, isRef, onScopeDispose, reactive, ref, shallowRef, toValue, unref, useAsyncData, useNuxtApp, useRequestFetch, useRuntimeConfig, watch } from '#imports'
-import { hash, serialize } from 'ohash'
 import { generateOptionSegments, Noop, pick, resolveReactiveValue } from './utils'
 
 type CustomFetchData<DataT, PickKeys extends KeysOf<DataT>, DefaultT> = DefaultT | PickFrom<DataT, PickKeys>
