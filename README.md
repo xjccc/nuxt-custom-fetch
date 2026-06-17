@@ -105,8 +105,8 @@ Always `await` `ajax.get`, `ajax.post`, and `ajax.request` in setup-compatible c
 ## Reactive Example
 
 ```ts
-import { CustomFetch } from '#imports'
 import { computed, ref } from 'vue'
+import { CustomFetch } from '#imports'
 
 const ajax = new CustomFetch({ baseURL: '/api' })
 
