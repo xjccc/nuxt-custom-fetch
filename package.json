@@ -65,7 +65,7 @@
     "nano-staged": "^1.0.2",
     "nitropack": "^2.13.1",
     "nuxt": "4.4.8",
-    "typescript": "6.0.3",
+    "typescript": "7.0.2",
     "vitest": "^4.1.9",
     "vue": "^3.5.30"
   },
