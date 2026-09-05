@@ -2,7 +2,7 @@
   "name": "nuxt-custom-fetch",
   "type": "module",
   "version": "4.4.0",
-  "packageManager": "pnpm@11.7.0",
+  "packageManager": "pnpm@11.25.0",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -41,33 +41,33 @@
     }
   },
   "peerDependencies": {
-    "nuxt": ">=4.4.0",
-    "vue": "^3.5.30"
+    "nuxt": ">=4.5.2",
+    "vue": "^3.5.42"
   },
   "dependencies": {
-    "@vue/shared": "^3.5.30",
-    "ohash": "^2.0.11"
+    "@vue/shared": "^3.5.42",
+    "ohash": "^2.0.12"
   },
   "devDependencies": {
-    "@antfu/eslint-config": "^9.0.0",
-    "@commitlint/cli": "^21.0.2",
-    "@commitlint/config-conventional": "^21.0.2",
-    "@nuxt/kit": "4.4.8",
-    "@nuxt/module-builder": "^1.0.2",
-    "@nuxt/schema": "4.4.8",
-    "@types/node": "^25.5.0",
-    "@vitest/coverage-v8": "^4.1.9",
+    "@antfu/eslint-config": "^9.5.1",
+    "@commitlint/cli": "^21.2.2",
+    "@commitlint/config-conventional": "^21.2.2",
+    "@nuxt/kit": "4.5.2",
+    "@nuxt/module-builder": "^1.0.3",
+    "@nuxt/schema": "4.5.2",
+    "@types/node": "^25.9.5",
+    "@vitest/coverage-v8": "^4.1.11",
     "changelogen": "^0.6.2",
-    "commitizen": "^4.3.1",
-    "cz-git": "^1.12.0",
-    "eslint": "^10.0.3",
+    "commitizen": "^4.3.2",
+    "cz-git": "^1.14.0",
+    "eslint": "^10.9.1",
     "husky": "^9.1.7",
     "nano-staged": "^1.0.2",
-    "nitropack": "^2.13.1",
-    "nuxt": "4.4.8",
+    "nitropack": "^2.13.4",
+    "nuxt": "4.5.2",
     "typescript": "6.0.3",
-    "vitest": "^4.1.9",
-    "vue": "^3.5.30"
+    "vitest": "^4.1.11",
+    "vue": "^3.5.42"
   },
   "husky": {
     "hooks": {
