@@ -24,7 +24,7 @@ The current implementation is maintained around these guarantees:
 - runtime behavior is aligned with Nuxt 4 async-data semantics where possible
 - public method generics follow Nuxt `AsyncData` typing more closely
 - reactive `key`, `baseURL`, `params`, `query`, `headers`, `body`, and `cache` values are resolved before each request
-- generated keys include both `params` and `query`, which avoids stale client reuse when only one side changes
+- generated keys are derived with Nuxt's `hashKey` (the same digest `useFetch` uses) and include both `params` and `query`, which avoids stale client reuse when only one side changes
 - same-key client compatibility requests share one async-data bucket, so `dedupe: 'cancel'` can abort the previous pending request
 - the client compatibility path mirrors Nuxt 4 async-data behavior: `pending` follows the `pendingWhenIdle` config, `refreshNuxtData()` (the `app:data:refresh` hook) re-runs fallback requests, `getCachedData` is honored and successful data is written back to `nuxtApp.payload.data`
 - the client compatibility path honors Nuxt 4.5's `enabled` option (a reactive `enabled` turning `false` cancels the in-flight request) and cancels an in-flight request when its owning scope is disposed
@@ -163,12 +163,22 @@ export function getReactivePageList (page: Ref<number>) {
 
 The remaining helper names follow the same rule: `getPageList` is the plain non-reactive list request, and `getDelayedPageMetric` is the intentionally slow metric request used for dedupe demonstrations.
 
+## Upgrading From 4.4.x
+
+- Nuxt `>= 4.5.0` is required.
+- Calls made in `setup` during client-side navigation now go through `useAsyncData`, so `lazy: true` no longer blocks navigation and `server`/`enabled` follow Nuxt's rules. Calls from event handlers, `onMounted`, or watchers still use the compatibility mode.
+- Errors thrown by `useAsyncData` are no longer swallowed and turned into a fallback.
+- Requests are sent with `query` only; `params` is merged into it. Interceptors still see `options.params`, which ofetch mirrors from `query`.
+- Generated keys changed because they now use `hashKey`. Only code that hard-coded a generated key (for example in `useNuxtData`) needs updating.
+- `error` is typed as `NuxtError<unknown> | undefined` by default.
+
 ## Request Semantics
 
 ### Key generation and dedupe
 
-- Without an explicit `key`, the module hashes `url + method + resolved request options`.
-- Both `params` and `query` participate in the generated key.
+- Without an explicit `key`, the module hashes `url + method + resolved request options` with Nuxt's `hashKey`.
+- Both `params` and `query` participate in the generated key (they are merged into `query` before hashing).
+- `FormData` bodies are hashed by their ordered entries (files as `name:size:lastModified`) and `URLSearchParams` bodies by their entries, so different uploads never share a key.
 - `immutableKey: true` makes the generated key depend only on the URL.
 - If you need exact cache control, provide your own `key`.
 - Same key means shared async-data state.
@@ -200,7 +210,7 @@ The remaining helper names follow the same rule: `getPageList` is the plain non-
 const ajax = new CustomFetch({
   baseURL: '',
   immutableKey: false,
-  showLogs: false,
+  showLogs: import.meta.dev,
   useHandler: true,
   handler: undefined,
   onRequest: undefined,
@@ -217,7 +227,9 @@ Available methods:
 - `ajax.post(url, config?, asyncDataOptions?)`
 - `ajax.request(url, { method, ...config }, asyncDataOptions?)`
 
-The return value follows Nuxt's `AsyncData<...>` shape and can use the same `default`, `pick`, `transform`, `watch`, `dedupe`, and `timeout` options you already know from `useAsyncData`.
+The return value follows Nuxt's `AsyncData<...>` shape and can use the same `default`, `pick`, `transform`, `watch`, `dedupe`, `timeout`, and `enabled` options you already know from `useAsyncData`.
+
+`showLogs` defaults to `true` in development and prints each client request with `console.info` (real problems such as an unserializable body still use `console.warn`). Set `showLogs: false` to silence it.
 
 ## Typing Notes
 
