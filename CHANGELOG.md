@@ -1,5 +1,22 @@
 # nuxt-custom-fetch
 
+## v4.5.0
+
+[compare changes](https://github.com/xjccc/nuxt-custom-fetch/compare/v4.4.8...v4.5.0)
+
+### 🚀 Enhancements
+
+- Add LICENSE ([cf10ce9](https://github.com/xjccc/nuxt-custom-fetch/commit/cf10ce9))
+- Align CustomFetch with Nuxt 4.5 async data ([#126](https://github.com/xjccc/nuxt-custom-fetch/pull/126))
+
+### 🩹 Fixes
+
+- Stop `pnpm release` from running the alpha publish as a pre-script ([#127](https://github.com/xjccc/nuxt-custom-fetch/pull/127))
+
+### ❤️ Contributors
+
+- Xjccc ([@xjccc](https://github.com/xjccc))
+
 ## v4.4.8
 
 [compare changes](https://github.com/xjccc/nuxt-custom-fetch/compare/v4.4.0...v4.4.8)
