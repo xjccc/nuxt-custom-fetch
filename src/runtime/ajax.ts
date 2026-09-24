@@ -71,7 +71,6 @@ const _cachedController = new Map<string, AbortController>()
 const _cachedClientAsyncData = new Map<string, ClientAsyncDataEntry>()
 const MAX_UNSCOPED_CLIENT_ASYNC_DATA_ENTRIES = 50
 const REPLACE_REG = /[-_]/g
-const FALLBACK_TO_CLIENT_ASYNC_DATA_RE = /component is already mounted|outside of a plugin|outside of a nuxt instance|requires access to the nuxt instance/i
 
 function createAbortController () {
   return typeof AbortController !== 'undefined' ? new AbortController() : undefined
@@ -114,10 +113,6 @@ function createMergedSignal (signals: Array<AbortSignal | undefined>, timeout?: 
   }
 
   return controller.signal
-}
-
-function shouldFallbackToClientAsyncData (error: unknown) {
-  return error instanceof Error && FALLBACK_TO_CLIENT_ASYNC_DATA_RE.test(error.message)
 }
 
 function pruneClientAsyncDataCache () {
@@ -667,20 +662,7 @@ export class CustomFetch {
       return createClientAsyncDataFallback()
     }
 
-    try {
-      return useAsyncData<ResT, NuxtErrorDataT, DataT, PickKeys, DefaultT>(key, _handler, options) as CustomFetchReturnValue<DataT, PickKeys, DefaultT, NuxtErrorDataT>
-    }
-    catch (error) {
-      if (!import.meta.client || !shouldFallbackToClientAsyncData(error)) {
-        throw error
-      }
-
-      if (import.meta.dev) {
-        console.warn('[Custom Fetch] Falling back to client compatibility mode outside setup-compatible async data context.')
-      }
-
-      return createClientAsyncDataFallback()
-    }
+    return useAsyncData<ResT, NuxtErrorDataT, DataT, PickKeys, DefaultT>(key, _handler, options) as CustomFetchReturnValue<DataT, PickKeys, DefaultT, NuxtErrorDataT>
   }
 
   get<ResT, NuxtErrorDataT = Error | null, DataT = ResT, PickKeys extends KeysOf<DataT> = KeysOf<DataT>, DefaultT = undefined>(

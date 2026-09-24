@@ -1140,7 +1140,7 @@ describe('customFetch', () => {
     expect(requestOnRequestError).toHaveBeenCalledTimes(1)
   })
 
-  it('falls back to client async-data compatibility mode for setup-context errors', async () => {
+  it('falls back to client async-data compatibility mode after hydration', async () => {
     interface FallbackResponse {
       count: number
       extra: string
@@ -1249,8 +1249,9 @@ describe('customFetch', () => {
     const mockState = __getNuxtMockState()
 
     __setRequestFetchImpl(requestFetch)
-    __setUseAsyncDataImpl(() => {
-      throw new Error('requires access to the nuxt instance')
+    __setNuxtApp({
+      isHydrating: false,
+      _asyncData: {}
     })
 
     const ajax = new CustomFetch({
@@ -1283,8 +1284,9 @@ describe('customFetch', () => {
     }))
 
     __setRequestFetchImpl(requestFetch)
-    __setUseAsyncDataImpl(() => {
-      throw new Error('outside of a nuxt instance')
+    __setNuxtApp({
+      isHydrating: false,
+      _asyncData: {}
     })
 
     const ajax = new CustomFetch({
@@ -1312,8 +1314,9 @@ describe('customFetch', () => {
     const requestFetch = vi.fn().mockRejectedValue(new Error('boom'))
 
     __setRequestFetchImpl(requestFetch)
-    __setUseAsyncDataImpl(() => {
-      throw new Error('outside of a plugin')
+    __setNuxtApp({
+      isHydrating: false,
+      _asyncData: {}
     })
 
     const ajax = new CustomFetch({
@@ -1344,8 +1347,9 @@ describe('customFetch', () => {
     asyncDataDefaults.errorValue = undefined
 
     __setRequestFetchImpl(requestFetch)
-    __setUseAsyncDataImpl(() => {
-      throw new Error('outside of a plugin')
+    __setNuxtApp({
+      isHydrating: false,
+      _asyncData: {}
     })
 
     try {
@@ -1384,8 +1388,9 @@ describe('customFetch', () => {
     const mockState = __getNuxtMockState()
 
     __setRequestFetchImpl(requestFetch)
-    __setUseAsyncDataImpl(() => {
-      throw new Error('outside of a plugin')
+    __setNuxtApp({
+      isHydrating: false,
+      _asyncData: {}
     })
 
     const ajax = new CustomFetch({
@@ -1415,8 +1420,9 @@ describe('customFetch', () => {
     const entries: unknown[] = []
 
     __setRequestFetchImpl(requestFetch)
-    __setUseAsyncDataImpl(() => {
-      throw new Error('outside of a plugin')
+    __setNuxtApp({
+      isHydrating: false,
+      _asyncData: {}
     })
 
     const ajax = new CustomFetch({
@@ -1454,8 +1460,9 @@ describe('customFetch', () => {
       .mockResolvedValueOnce({ count: 2 })
 
     __setRequestFetchImpl(requestFetch)
-    __setUseAsyncDataImpl(() => {
-      throw new Error('outside of a nuxt instance')
+    __setNuxtApp({
+      isHydrating: false,
+      _asyncData: {}
     })
 
     const ajax = new CustomFetch({
@@ -1494,8 +1501,9 @@ describe('customFetch', () => {
     const externalController = new AbortController()
 
     __setRequestFetchImpl(requestFetch)
-    __setUseAsyncDataImpl(() => {
-      throw new Error('outside of a plugin')
+    __setNuxtApp({
+      isHydrating: false,
+      _asyncData: {}
     })
 
     const ajax = new CustomFetch({
@@ -1520,17 +1528,19 @@ describe('customFetch', () => {
     expect(asyncData.pending.value).toBe(false)
   })
 
-  it('rethrows non-fallback async-data errors on the client', async () => {
-    __setUseAsyncDataImpl(() => {
-      throw new Error('boom')
-    })
-
+  it('propagates useAsyncData errors instead of falling back', async () => {
     const ajax = new CustomFetch({
       baseURL: '/api',
       showLogs: false
     })
 
-    expect(() => ajax.get('/hello')).toThrow('boom')
+    for (const message of ['boom', 'A composable that requires access to the Nuxt instance was called outside of a plugin, Nuxt hook, Nuxt middleware, or Vue setup function.']) {
+      __setUseAsyncDataImpl(() => {
+        throw new Error(message)
+      })
+
+      expect(() => ajax.get('/hello')).toThrow(message)
+    }
   })
 
   it('refreshes fallback data when the app:data:refresh hook fires', async () => {
