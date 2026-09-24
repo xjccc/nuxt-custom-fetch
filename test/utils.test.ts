@@ -1,5 +1,5 @@
-import { ref } from '#imports'
 import { hash } from 'ohash'
+import { ref } from '#imports'
 import { generateOptionSegments, Noop, pick, resolveReactiveValue } from '../src/runtime/utils'
 
 describe('noop', () => {
@@ -198,9 +198,30 @@ describe('generateOptionSegments', () => {
       body
     })
 
-    expect(segments.at(-1)).toBe(hash({
-      name: 'Ada'
-    }))
+    expect(segments.at(-1)).toBe(hash([
+      ['name', 'Ada']
+    ]))
+  })
+
+  it('distinguishes FormData files with the same name and repeated entry keys', () => {
+    function formDataKey (entries: Array<[string, string | File]>) {
+      const body = new FormData()
+      for (const [key, value] of entries) {
+        body.append(key, value)
+      }
+
+      return generateOptionSegments({
+        method: 'POST',
+        body
+      }).at(-1)
+    }
+
+    const avatar = new File(['a'], 'avatar.png', { lastModified: 1 })
+
+    expect(formDataKey([['file', avatar]])).not.toBe(formDataKey([['file', new File(['bb'], 'avatar.png', { lastModified: 1 })]]))
+    expect(formDataKey([['file', avatar]])).not.toBe(formDataKey([['file', new File(['a'], 'avatar.png', { lastModified: 2 })]]))
+    expect(formDataKey([['tag', 'a'], ['tag', 'b']])).not.toBe(formDataKey([['tag', 'c'], ['tag', 'b']]))
+    expect(formDataKey([['file', avatar]])).toBe(formDataKey([['file', new File(['a'], 'avatar.png', { lastModified: 1 })]]))
   })
 
   it('hashes truthy primitive bodies directly', () => {

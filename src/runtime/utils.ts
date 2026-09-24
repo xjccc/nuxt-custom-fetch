@@ -1,8 +1,8 @@
 import type { MaybeRef } from '#imports'
 import type { CustomFetchOptions, FetchMethod, MaybeRefDeep } from './type'
-import { toValue } from '#imports'
 import { isPlainObject } from '@vue/shared'
 import { hash } from 'ohash'
+import { toValue } from '#imports'
 
 export function Noop () { }
 
@@ -107,12 +107,12 @@ export function generateOptionSegments<_ResT> (opts: CustomFetchOptions & { meth
       segments.push(hash(Object.fromEntries(Array.from(new Uint8Array(value).entries(), ([key, item]) => [key, item.toString()]))))
     }
     else if (isFormDataValue(value)) {
-      const obj: Record<string, string> = {}
+      const entries: Array<[string, string]> = []
       for (const entry of value.entries()) {
         const [key, val] = entry
-        obj[key] = isFileValue(val) ? val.name : val
+        entries.push([key, isFileValue(val) ? `${val.name}:${val.size}:${val.lastModified}` : val])
       }
-      segments.push(hash(obj))
+      segments.push(hash(entries))
     }
     else if (isPlainObject(value)) {
       segments.push(hash(resolveReactiveValue(value)))
