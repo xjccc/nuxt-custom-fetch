@@ -14,7 +14,7 @@ Use `CustomFetch` when you specifically need an extra request layer on top of th
 
 ## Compatibility
 
-- `v4`: Nuxt `>= 4.4.0`
+- `v4`: Nuxt `>= 4.5.0`
 - `v2`: Nuxt `3.0.0` to `3.16.x`
 
 ## Current Maintenance Summary
