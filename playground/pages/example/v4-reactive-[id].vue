@@ -55,8 +55,8 @@
 </template>
 
 <script setup lang="ts">
-import { useRoute, useRouter } from '#imports'
 import { computed } from 'vue'
+import { useRoute, useRouter } from '#imports'
 import { getGreetingByUserId } from '@/api'
 
 const route = useRoute()

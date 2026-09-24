@@ -65,8 +65,8 @@
 </template>
 
 <script setup lang="ts">
-import { CustomFetch } from '#imports'
 import { computed, ref } from 'vue'
+import { CustomFetch } from '#imports'
 
 const rawPage = ref('1')
 const useHandler = ref(true)

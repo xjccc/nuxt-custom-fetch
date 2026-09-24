@@ -64,8 +64,8 @@
 </template>
 
 <script setup lang="ts">
-import { CustomFetch } from '#imports'
 import { ref, watch } from 'vue'
+import { CustomFetch } from '#imports'
 
 const page = ref(1)
 const logs = ref<string[]>([])
