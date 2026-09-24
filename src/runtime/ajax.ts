@@ -33,10 +33,7 @@ interface RuntimeConfigWithApp {
 
 interface NuxtAppWithAsyncData {
   isHydrating?: boolean
-  _asyncData?: Record<string, {
-    _deps?: number
-    execute?: (opts?: AsyncDataExecuteOptions) => Promise<unknown>
-  } | undefined>
+  _asyncData?: Record<string, NuxtAsyncDataEntry | undefined>
   payload?: {
     data?: Record<string, unknown>
     _errors?: Record<string, unknown>
@@ -55,6 +52,13 @@ interface ClientAsyncDataEntry {
   pending: Ref<boolean>
   refresh: (opts?: AsyncDataExecuteOptions) => Promise<void>
   status: Ref<'idle' | 'pending' | 'success' | 'error'>
+}
+
+/** Nuxt's internal `_asyncData` entry: it has no `refresh`/`clear` and is not a promise. */
+type NuxtAsyncDataEntry = Omit<ClientAsyncDataEntry, 'clear' | 'execute' | 'refresh'> & {
+  _abortController?: AbortController
+  _deps?: number
+  execute: (opts?: AsyncDataExecuteOptions) => Promise<unknown>
 }
 
 type RequestFetchOptions = Omit<CustomFetchRequestOptions, 'key' | 'immutableKey' | 'showLogs' | 'useHandler' | 'handler' | 'offline'>
@@ -126,6 +130,27 @@ function pruneClientAsyncDataCache () {
 
     const [, asyncData] = oldestEntry
     asyncData.clear()
+  }
+}
+
+/** Expose a Nuxt `_asyncData` entry with the public AsyncData methods, mirroring Nuxt's own `refresh`/`clear`. */
+function toClientAsyncDataEntry (key: string, entry: NuxtAsyncDataEntry): ClientAsyncDataEntry {
+  const execute = async (opts?: AsyncDataExecuteOptions) => {
+    await entry.execute(opts)
+  }
+
+  return {
+    data: entry.data,
+    error: entry.error,
+    pending: entry.pending,
+    status: entry.status,
+    execute,
+    refresh: execute,
+    clear: () => {
+      entry._abortController?.abort(new DOMException('AsyncData aborted by user.', 'AbortError'))
+      entry._abortController = undefined
+      clearNuxtData(key)
+    }
   }
 }
 
@@ -624,24 +649,19 @@ export class CustomFetch {
     const cachedClientAsyncData = _cachedClientAsyncData.get(key.value)
 
     if (import.meta.client && !nuxtApp.isHydrating) {
-      if (sharedAsyncData?._deps && typeof sharedAsyncData.execute === 'function') {
-        void sharedAsyncData.execute({
-          cause: 'initial',
-          dedupe: options.dedupe
-        })
+      const reusableAsyncData = sharedAsyncData?._deps && typeof sharedAsyncData.execute === 'function'
+        ? toClientAsyncDataEntry(key.value, sharedAsyncData)
+        : cachedClientAsyncData
 
-        return sharedAsyncData as CustomFetchReturnValue<DataT, PickKeys, DefaultT, NuxtErrorDataT>
-      }
-
-      if (cachedClientAsyncData) {
+      if (reusableAsyncData) {
         if (options.immediate === false) {
-          return Promise.resolve(cachedClientAsyncData) as CustomFetchReturnValue<DataT, PickKeys, DefaultT, NuxtErrorDataT>
+          return Promise.resolve(reusableAsyncData) as CustomFetchReturnValue<DataT, PickKeys, DefaultT, NuxtErrorDataT>
         }
 
-        return cachedClientAsyncData.execute({
+        return reusableAsyncData.execute({
           cause: 'initial',
           dedupe: options.dedupe
-        }).then(() => cachedClientAsyncData) as CustomFetchReturnValue<DataT, PickKeys, DefaultT, NuxtErrorDataT>
+        }).then(() => reusableAsyncData) as CustomFetchReturnValue<DataT, PickKeys, DefaultT, NuxtErrorDataT>
       }
 
       return createClientAsyncDataFallback()

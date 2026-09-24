@@ -1,6 +1,6 @@
 import type { AsyncDataOptions } from 'nuxt/app'
-import { ref } from '#imports'
 import { computed } from 'vue'
+import { ref } from '#imports'
 import { CustomFetch } from '../src/runtime/ajax'
 import { __setPendingWhenIdle, asyncDataDefaults } from './mocks/nuxt-config'
 import { __getNuxtMockState, __setNuxtApp, __setRequestFetchImpl, __setRuntimeConfig, __setUseAsyncDataImpl } from './mocks/nuxt-imports'
@@ -405,15 +405,21 @@ describe('customFetch', () => {
   it('reuses existing nuxt asyncData entries on the client after hydration', async () => {
     const requestFetch = vi.fn()
     const useAsyncData = vi.fn()
-    const execute = vi.fn(async () => {})
+    let resolveExecute: (() => void) | undefined
+    const execute = vi.fn<(opts?: unknown) => Promise<void>>()
+      .mockImplementationOnce(() => new Promise<void>((resolve) => {
+        resolveExecute = resolve
+      }))
+      .mockResolvedValue(undefined)
+    const abortController = new AbortController()
+    // mirrors Nuxt's internal `_asyncData` entry: no `refresh`/`clear` and not a promise
     const sharedAsyncData = {
+      _abortController: abortController as AbortController | undefined,
       _deps: 1,
-      clear: vi.fn(),
       data: ref({ ok: true }),
       error: ref(undefined),
       execute,
       pending: ref(false),
-      refresh: execute,
       status: ref('success')
     }
 
@@ -430,19 +436,77 @@ describe('customFetch', () => {
       baseURL: '/api',
       showLogs: false
     })
-    const asyncData = await ajax.get<{ ok: boolean }>('/hello', {
+    let settled = false
+    const request = ajax.get<{ ok: boolean }>('/hello', {
       key: 'shared:key'
     }, {
       dedupe: 'defer'
+    }).then((asyncData) => {
+      settled = true
+      return asyncData
     })
 
-    expect(asyncData).toBe(sharedAsyncData)
+    await new Promise(resolve => setTimeout(resolve, 0))
+    expect(settled).toBe(false)
+
+    resolveExecute?.()
+    const asyncData = await request
+
+    expect(asyncData.data).toBe(sharedAsyncData.data)
+    expect(asyncData.status).toBe(sharedAsyncData.status)
     expect(execute).toHaveBeenCalledWith({
       cause: 'initial',
       dedupe: 'defer'
     })
+
+    await asyncData.refresh({ dedupe: 'cancel' })
+
+    expect(execute).toHaveBeenLastCalledWith({ dedupe: 'cancel' })
+
+    asyncData.clear()
+
+    expect(abortController.signal.aborted).toBe(true)
+    expect(sharedAsyncData._abortController).toBeUndefined()
+    expect(__getNuxtMockState().clearNuxtDataCalls).toEqual(['shared:key'])
     expect(requestFetch).not.toHaveBeenCalled()
     expect(useAsyncData).not.toHaveBeenCalled()
+  })
+
+  it('does not execute reused nuxt asyncData entries when immediate is false', async () => {
+    const execute = vi.fn(async () => {})
+    const sharedAsyncData = {
+      _deps: 1,
+      data: ref('shared'),
+      error: ref(undefined),
+      execute,
+      pending: ref(false),
+      status: ref('success')
+    }
+
+    __setNuxtApp({
+      isHydrating: false,
+      _asyncData: {
+        'shared:key': sharedAsyncData
+      }
+    })
+    __setRequestFetchImpl(vi.fn())
+
+    const ajax = new CustomFetch({
+      baseURL: '/api',
+      showLogs: false
+    })
+    const { data, refresh } = await ajax.get<string>('/hello', {
+      key: 'shared:key'
+    }, {
+      immediate: false
+    })
+
+    expect(data.value).toBe('shared')
+    expect(execute).not.toHaveBeenCalled()
+
+    await refresh()
+
+    expect(execute).toHaveBeenCalledTimes(1)
   })
 
   it('does not reuse hydrated asyncData when only query changes', async () => {
