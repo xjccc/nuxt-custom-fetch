@@ -15,4 +15,5 @@ beforeEach(() => {
   })
 
   vi.spyOn(console, 'warn').mockImplementation(() => {})
+  vi.spyOn(console, 'info').mockImplementation(() => {})
 })

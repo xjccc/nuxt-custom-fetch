@@ -308,7 +308,7 @@ export class CustomFetch {
       catch (error) {
         console.warn('[Custom Fetch] couldn\'t serialize [Body]:', error)
       }
-      console.warn([
+      console.info([
         '———————————— [Custom Fetch] ————————————',
         `[Request URL]: ${url}`,
         '',

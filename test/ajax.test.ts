@@ -232,7 +232,7 @@ describe('customFetch', () => {
 
   it('logs request details when showLogs is enabled on the client', async () => {
     const requestFetch = vi.fn().mockResolvedValue({ ok: true })
-    const warn = vi.spyOn(console, 'warn')
+    const warn = vi.spyOn(console, 'info')
 
     __setRequestFetchImpl(requestFetch)
     __setUseAsyncDataImpl(async (_key, handler) => {
@@ -262,7 +262,7 @@ describe('customFetch', () => {
 
   it('does not log request details when showLogs is disabled', async () => {
     const requestFetch = vi.fn().mockResolvedValue({ ok: true })
-    const warn = vi.spyOn(console, 'warn')
+    const warn = vi.spyOn(console, 'info')
 
     __setRequestFetchImpl(requestFetch)
     __setUseAsyncDataImpl(async (_key, handler) => {
@@ -287,7 +287,7 @@ describe('customFetch', () => {
 
   it('lets request showLogs override the instance setting', async () => {
     const requestFetch = vi.fn().mockResolvedValue({ ok: true })
-    const warn = vi.spyOn(console, 'warn')
+    const warn = vi.spyOn(console, 'info')
 
     __setRequestFetchImpl(requestFetch)
     __setUseAsyncDataImpl(async (_key, handler) => {
@@ -313,7 +313,7 @@ describe('customFetch', () => {
 
   it('logs computed keys and params as resolved values', async () => {
     const requestFetch = vi.fn().mockResolvedValue({ ok: true })
-    const warn = vi.spyOn(console, 'warn')
+    const warn = vi.spyOn(console, 'info')
 
     __setRequestFetchImpl(requestFetch)
     __setUseAsyncDataImpl(async (_key, handler) => {
