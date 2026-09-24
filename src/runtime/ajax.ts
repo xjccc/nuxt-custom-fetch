@@ -5,7 +5,7 @@ import type { CustomFetchOptions, CustomFetchRequestOptions, FetchContext, Fetch
 import { hash, serialize } from 'ohash'
 // @ts-expect-error virtual file
 import { asyncDataDefaults, granularCachedData, pendingWhenIdle } from '#build/nuxt.config.mjs'
-import { clearNuxtData, computed, createError, getCurrentScope, isRef, onScopeDispose, reactive, ref, shallowRef, toValue, unref, useAsyncData, useNuxtApp, useRequestFetch, useRuntimeConfig, watch } from '#imports'
+import { clearNuxtData, computed, createError, getCurrentInstance, getCurrentScope, isRef, onScopeDispose, reactive, ref, shallowRef, toValue, unref, useAsyncData, useNuxtApp, useRequestFetch, useRuntimeConfig, watch } from '#imports'
 import { generateOptionSegments, Noop, pick, resolveReactiveValue } from './utils'
 
 type CustomFetchData<DataT, PickKeys extends KeysOf<DataT>, DefaultT> = DefaultT | PickFrom<DataT, PickKeys>
@@ -33,6 +33,7 @@ interface RuntimeConfigWithApp {
 
 interface NuxtAppWithAsyncData {
   isHydrating?: boolean
+  _processingMiddleware?: string | boolean
   _asyncData?: Record<string, NuxtAsyncDataEntry | undefined>
   payload?: {
     data?: Record<string, unknown>
@@ -436,9 +437,10 @@ export class CustomFetch {
       let keyChanging = false
       let stopKeyWatch: (() => void) | undefined
       let stopOptionWatch: (() => void) | undefined
+      let stopEnabledWatch: (() => void) | undefined
       let stopRefreshHook: (() => void) | undefined
 
-      const initialStatus = options.immediate === false ? 'idle' : 'pending'
+      const initialStatus = options.immediate === false || toValue(options.enabled) === false ? 'idle' : 'pending'
       const statusRef = _ref(initialStatus) as Ref<'idle' | 'pending' | 'success' | 'error'>
       const pendingRef = (usePendingRef
         ? _ref(initialStatus === 'pending')
@@ -455,6 +457,8 @@ export class CustomFetch {
         stopKeyWatch = undefined
         stopOptionWatch?.()
         stopOptionWatch = undefined
+        stopEnabledWatch?.()
+        stopEnabledWatch = undefined
         stopRefreshHook?.()
         stopRefreshHook = undefined
       }
@@ -503,6 +507,10 @@ export class CustomFetch {
               setPending(false)
               return
             }
+          }
+
+          if (toValue(options.enabled) === false) {
+            return
           }
 
           const currentRequestId = ++requestId
@@ -574,6 +582,25 @@ export class CustomFetch {
         }
       }
 
+      // Like Nuxt: abort the in-flight request and settle the state right away (on unmount or `enabled: false`).
+      const cancelActiveRequest = (reason: string) => {
+        if (!activeRequest) {
+          return
+        }
+
+        requestId++
+        activeController?.abort(new DOMException(reason, 'AbortError'))
+        activeRequest = undefined
+        activeController = undefined
+        _cachedController.delete(key.value)
+
+        if (asyncData.status.value === 'pending') {
+          asyncData.status.value = 'idle'
+        }
+
+        setPending(false)
+      }
+
       _cachedClientAsyncData.set(key.value, asyncData as ClientAsyncDataEntry)
 
       stopRefreshHook = nuxtApp.hook?.('app:data:refresh', async (keys?: string[]) => {
@@ -625,12 +652,23 @@ export class CustomFetch {
         }, { flush: 'post' })
       }
 
+      if (isRef(options.enabled) || typeof options.enabled === 'function') {
+        stopEnabledWatch = watch(() => toValue(options.enabled), (isEnabled) => {
+          if (!isEnabled) {
+            cancelActiveRequest('AsyncData request cancelled by `enabled: false`')
+          }
+        })
+      }
+
       if (!hasScope) {
         pruneClientAsyncDataCache()
       }
 
       if (hasScope) {
-        onScopeDispose(stopWatchers)
+        onScopeDispose(() => {
+          stopWatchers()
+          cancelActiveRequest('AsyncData request cancelled by unmount')
+        })
       }
 
       if (options.immediate === false) {
@@ -642,8 +680,10 @@ export class CustomFetch {
 
     const sharedAsyncData = nuxtApp._asyncData?.[key.value]
     const cachedClientAsyncData = _cachedClientAsyncData.get(key.value)
+    const instance = getCurrentInstance()
 
-    if (import.meta.client && !nuxtApp.isHydrating) {
+    // Only fall back where Nuxt would warn "Component is already mounted"; setup code keeps using useAsyncData.
+    if (import.meta.client && !nuxtApp.isHydrating && !nuxtApp._processingMiddleware && (!instance || instance.isMounted)) {
       const reusableAsyncData = sharedAsyncData?._deps && typeof sharedAsyncData.execute === 'function'
         ? toClientAsyncDataEntry(key.value, sharedAsyncData)
         : cachedClientAsyncData

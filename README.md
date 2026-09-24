@@ -27,6 +27,7 @@ The current implementation is maintained around these guarantees:
 - generated keys include both `params` and `query`, which avoids stale client reuse when only one side changes
 - same-key client compatibility requests share one async-data bucket, so `dedupe: 'cancel'` can abort the previous pending request
 - the client compatibility path mirrors Nuxt 4 async-data behavior: `pending` follows the `pendingWhenIdle` config, `refreshNuxtData()` (the `app:data:refresh` hook) re-runs fallback requests, `getCachedData` is honored and successful data is written back to `nuxtApp.payload.data`
+- the client compatibility path honors Nuxt 4.5's `enabled` option (a reactive `enabled` turning `false` cancels the in-flight request) and cancels an in-flight request when its owning scope is disposed
 - timeouts and external abort signals are merged into one request signal (via `AbortSignal.timeout`/`AbortSignal.any` semantics), key watchers are only created for reactive keys, and a key change re-runs the request when `immediate`, prior data, or an in-flight request is present
 - Vitest runtime tests and TypeScript type tests cover the wrapper behavior
 
@@ -55,8 +56,8 @@ export const useCachedData = createUseAsyncData({
 
 ## How It Works
 
-- In `setup`, plugins, and other setup-compatible contexts, `CustomFetch` delegates back to `useAsyncData`.
-- After mount on the client, or when `useAsyncData` is unavailable in the current context, it falls back to a compatibility mode.
+- In `setup` (including client-side navigation), route middleware, plugins during hydration, and other setup-compatible contexts, `CustomFetch` delegates back to `useAsyncData`, so options such as `lazy`, `server`, and `enabled` follow Nuxt exactly.
+- After hydration on the client, calls made outside component setup (event handlers, lifecycle hooks such as `onMounted`, watchers) fall back to a compatibility mode. This is the same condition under which Nuxt warns "Component is already mounted".
 - The compatibility mode still exposes `data`, `error`, `status`, `pending`, `refresh`, `execute`, and `clear`.
 - The compatibility mode is not a full SSR payload or cache replacement.
 - Calls that intentionally share the same `key` should keep `handler`, `deep`, `transform`, `pick`, `getCachedData`, and `default` consistent, matching Nuxt's keyed async-data rules.
@@ -189,7 +190,7 @@ The remaining helper names follow the same rule: `getPageList` is the plain non-
 
 ### Client compatibility mode
 
-- Client calls made after mount reuse existing same-key async-data state when available.
+- Client calls made after mount reuse existing same-key async-data state when available, and still get the full `AsyncData` shape (`refresh`, `execute`, and `clear` included).
 - If no Nuxt-managed keyed state exists yet, the module creates and caches a compatibility async-data instance by key.
 - `refresh`, `execute`, `clear`, `watch`, status updates, and cancellation still work in this mode.
 - This mode should not be treated as a full SSR payload cache replacement.

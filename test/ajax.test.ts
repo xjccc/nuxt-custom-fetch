@@ -1676,4 +1676,166 @@ describe('customFetch', () => {
       __setPendingWhenIdle(false)
     }
   })
+
+  it.each([
+    {
+      caller: 'component setup',
+      instance: { isMounted: false },
+      processingMiddleware: undefined,
+      usesAsyncData: true
+    },
+    {
+      caller: 'route middleware',
+      instance: null,
+      processingMiddleware: true,
+      usesAsyncData: true
+    },
+    {
+      caller: 'a mounted component',
+      instance: { isMounted: true },
+      processingMiddleware: undefined,
+      usesAsyncData: false
+    },
+    {
+      caller: 'outside components',
+      instance: null,
+      processingMiddleware: undefined,
+      usesAsyncData: false
+    }
+  ])('after hydration, calls from $caller use useAsyncData: $usesAsyncData', async ({ instance, processingMiddleware, usesAsyncData }) => {
+    const requestFetch = vi.fn().mockResolvedValue({ ok: true })
+    const useAsyncData = vi.fn(async (_key: unknown, handler: (...args: any[]) => Promise<unknown>) => {
+      return createAsyncDataResult(await handler({}, {
+        signal: new AbortController().signal
+      }))
+    })
+
+    __getNuxtMockState().currentInstance = instance
+    __setNuxtApp({
+      isHydrating: false,
+      _processingMiddleware: processingMiddleware,
+      _asyncData: {}
+    })
+    __setRequestFetchImpl(requestFetch)
+    __setUseAsyncDataImpl(useAsyncData)
+
+    const ajax = new CustomFetch({
+      baseURL: '/api',
+      showLogs: false
+    })
+    const { data } = await ajax.get<{ ok: boolean }>('/hello')
+
+    expect(data.value).toEqual({ ok: true })
+    expect(useAsyncData).toHaveBeenCalledTimes(usesAsyncData ? 1 : 0)
+    expect(requestFetch).toHaveBeenCalledTimes(1)
+  })
+
+  it('skips fallback requests while enabled is false', async () => {
+    const requestFetch = vi.fn().mockResolvedValue({ ok: true })
+
+    __setNuxtApp({
+      isHydrating: false,
+      _asyncData: {}
+    })
+    __setRequestFetchImpl(requestFetch)
+
+    const ajax = new CustomFetch({
+      baseURL: '/api',
+      showLogs: false
+    })
+    const asyncData = await ajax.get<{ ok: boolean }>('/hello', {
+      key: 'enabled:static'
+    }, {
+      enabled: false
+    })
+
+    expect(asyncData.status.value).toBe('idle')
+    expect(asyncData.pending.value).toBe(false)
+    expect(asyncData.data.value).toBeUndefined()
+
+    await asyncData.refresh()
+
+    expect(requestFetch).not.toHaveBeenCalled()
+  })
+
+  it('cancels the in-flight fallback request when a reactive enabled turns false', async () => {
+    let signal: AbortSignal | undefined
+    const requestFetch = vi.fn((_request: string, options: Record<string, any>) => {
+      signal = options.signal
+      return new Promise(() => {})
+    })
+    const enabled = ref(true)
+    const mockState = __getNuxtMockState()
+
+    __setNuxtApp({
+      isHydrating: false,
+      _asyncData: {}
+    })
+    __setRequestFetchImpl(requestFetch)
+
+    const ajax = new CustomFetch({
+      baseURL: '/api',
+      showLogs: false
+    })
+    const asyncData = await ajax.get('/hello', {
+      key: 'enabled:reactive'
+    }, {
+      enabled,
+      immediate: false
+    })
+
+    void asyncData.execute()
+
+    expect(asyncData.status.value).toBe('pending')
+
+    const enabledWatch = mockState.watchCalls.find(call => typeof call.source === 'function')
+
+    enabled.value = false
+    enabledWatch?.callback(false)
+
+    expect(signal?.aborted).toBe(true)
+    expect((signal?.reason as DOMException).message).toBe('AsyncData request cancelled by `enabled: false`')
+    expect(asyncData.status.value).toBe('idle')
+    expect(asyncData.pending.value).toBe(false)
+
+    await asyncData.refresh()
+
+    expect(requestFetch).toHaveBeenCalledTimes(1)
+  })
+
+  it('cancels the in-flight fallback request when its scope is disposed', async () => {
+    let signal: AbortSignal | undefined
+    const requestFetch = vi.fn((_request: string, options: Record<string, any>) => {
+      signal = options.signal
+      return new Promise(() => {})
+    })
+    const mockState = __getNuxtMockState()
+
+    mockState.currentScope = {}
+    __setNuxtApp({
+      isHydrating: false,
+      _asyncData: {}
+    })
+    __setRequestFetchImpl(requestFetch)
+
+    const ajax = new CustomFetch({
+      baseURL: '/api',
+      showLogs: false
+    })
+    const asyncData = await ajax.get('/hello', {
+      key: 'dispose:key'
+    }, {
+      immediate: false
+    })
+
+    void asyncData.execute()
+
+    for (const dispose of mockState.scopeDisposers) {
+      dispose()
+    }
+
+    expect(signal?.aborted).toBe(true)
+    expect((signal?.reason as DOMException).message).toBe('AsyncData request cancelled by unmount')
+    expect(asyncData.status.value).toBe('idle')
+  })
 })

@@ -13,6 +13,7 @@ type RequestFetchImpl = (...args: any[]) => Promise<unknown>
 type HookCallback = (...args: any[]) => unknown
 interface NuxtAppState {
   isHydrating: boolean
+  _processingMiddleware?: string | boolean
   _asyncData: Record<string, {
     _deps?: number
     execute?: (opts?: unknown) => Promise<unknown>
@@ -91,7 +92,8 @@ function createInitialState () {
     watchCalls: [] as WatchCall[],
     watchStopCalls: 0,
     scopeDisposers: [] as Array<() => void>,
-    currentScope: null as unknown
+    currentScope: null as unknown,
+    currentInstance: null as { isMounted: boolean } | null
   }
 }
 
@@ -108,6 +110,7 @@ export function __resetNuxtMocks () {
   state.watchStopCalls = 0
   state.scopeDisposers = []
   state.currentScope = nextState.currentScope
+  state.currentInstance = nextState.currentInstance
 }
 
 export function __setRuntimeConfig (runtimeConfig: typeof state.runtimeConfig) {
@@ -150,6 +153,10 @@ export function computed<T> (getter: () => T) {
 
 export function createError (error: unknown) {
   return error instanceof Error ? error : new Error(String(error))
+}
+
+export function getCurrentInstance () {
+  return state.currentInstance
 }
 
 export function getCurrentScope () {
