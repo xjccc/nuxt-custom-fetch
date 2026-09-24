@@ -237,17 +237,17 @@ export class CustomFetch {
     }
   }
 
-  request<ResT, NuxtErrorDataT = Error | null, DataT = ResT, PickKeys extends KeysOf<DataT> = KeysOf<DataT>, DefaultT = undefined>(
+  request<ResT, NuxtErrorDataT = unknown, DataT = ResT, PickKeys extends KeysOf<DataT> = KeysOf<DataT>, DefaultT = undefined>(
     url: NitroFetchRequest,
     config: CustomFetchRequestOptions,
     options?: AsyncDataOptions<ResT, DataT, PickKeys, DefaultT>
   ): CustomFetchReturnValue<DataT, PickKeys, DefaultT, NuxtErrorDataT>
-  request<ResT, NuxtErrorDataT = Error | null, DataT = ResT, PickKeys extends KeysOf<DataT> = KeysOf<DataT>, DefaultT = DataT>(
+  request<ResT, NuxtErrorDataT = unknown, DataT = ResT, PickKeys extends KeysOf<DataT> = KeysOf<DataT>, DefaultT = DataT>(
     url: NitroFetchRequest,
     config: CustomFetchRequestOptions,
     options?: AsyncDataOptions<ResT, DataT, PickKeys, DefaultT>
   ): CustomFetchReturnValue<DataT, PickKeys, DefaultT, NuxtErrorDataT>
-  request<ResT, NuxtErrorDataT = Error | null, DataT = ResT, PickKeys extends KeysOf<DataT> = KeysOf<DataT>, DefaultT = undefined>(
+  request<ResT, NuxtErrorDataT = unknown, DataT = ResT, PickKeys extends KeysOf<DataT> = KeysOf<DataT>, DefaultT = undefined>(
     url: NitroFetchRequest,
     config: CustomFetchRequestOptions,
     options: AsyncDataOptions<ResT, DataT, PickKeys, DefaultT> = {}
@@ -702,17 +702,17 @@ export class CustomFetch {
     return useAsyncData<ResT, NuxtErrorDataT, DataT, PickKeys, DefaultT>(key, _handler, options) as CustomFetchReturnValue<DataT, PickKeys, DefaultT, NuxtErrorDataT>
   }
 
-  get<ResT, NuxtErrorDataT = Error | null, DataT = ResT, PickKeys extends KeysOf<DataT> = KeysOf<DataT>, DefaultT = undefined>(
+  get<ResT, NuxtErrorDataT = unknown, DataT = ResT, PickKeys extends KeysOf<DataT> = KeysOf<DataT>, DefaultT = undefined>(
     url: NitroFetchRequest,
     config?: CustomFetchOptions,
     options?: AsyncDataOptions<ResT, DataT, PickKeys, DefaultT>
   ): CustomFetchReturnValue<DataT, PickKeys, DefaultT, NuxtErrorDataT>
-  get<ResT, NuxtErrorDataT = Error | null, DataT = ResT, PickKeys extends KeysOf<DataT> = KeysOf<DataT>, DefaultT = DataT>(
+  get<ResT, NuxtErrorDataT = unknown, DataT = ResT, PickKeys extends KeysOf<DataT> = KeysOf<DataT>, DefaultT = DataT>(
     url: NitroFetchRequest,
     config?: CustomFetchOptions,
     options?: AsyncDataOptions<ResT, DataT, PickKeys, DefaultT>
   ): CustomFetchReturnValue<DataT, PickKeys, DefaultT, NuxtErrorDataT>
-  get<ResT, NuxtErrorDataT = Error | null, DataT = ResT, PickKeys extends KeysOf<DataT> = KeysOf<DataT>, DefaultT = undefined>(
+  get<ResT, NuxtErrorDataT = unknown, DataT = ResT, PickKeys extends KeysOf<DataT> = KeysOf<DataT>, DefaultT = undefined>(
     url: NitroFetchRequest,
     config: CustomFetchOptions = {},
     options?: AsyncDataOptions<ResT, DataT, PickKeys, DefaultT>
@@ -723,17 +723,17 @@ export class CustomFetch {
     }, options)
   }
 
-  post<ResT, NuxtErrorDataT = Error | null, DataT = ResT, PickKeys extends KeysOf<DataT> = KeysOf<DataT>, DefaultT = undefined>(
+  post<ResT, NuxtErrorDataT = unknown, DataT = ResT, PickKeys extends KeysOf<DataT> = KeysOf<DataT>, DefaultT = undefined>(
     url: NitroFetchRequest,
     config?: CustomFetchOptions,
     options?: AsyncDataOptions<ResT, DataT, PickKeys, DefaultT>
   ): CustomFetchReturnValue<DataT, PickKeys, DefaultT, NuxtErrorDataT>
-  post<ResT, NuxtErrorDataT = Error | null, DataT = ResT, PickKeys extends KeysOf<DataT> = KeysOf<DataT>, DefaultT = DataT>(
+  post<ResT, NuxtErrorDataT = unknown, DataT = ResT, PickKeys extends KeysOf<DataT> = KeysOf<DataT>, DefaultT = DataT>(
     url: NitroFetchRequest,
     config?: CustomFetchOptions,
     options?: AsyncDataOptions<ResT, DataT, PickKeys, DefaultT>
   ): CustomFetchReturnValue<DataT, PickKeys, DefaultT, NuxtErrorDataT>
-  post<ResT, NuxtErrorDataT = Error | null, DataT = ResT, PickKeys extends KeysOf<DataT> = KeysOf<DataT>, DefaultT = undefined>(
+  post<ResT, NuxtErrorDataT = unknown, DataT = ResT, PickKeys extends KeysOf<DataT> = KeysOf<DataT>, DefaultT = undefined>(
     url: NitroFetchRequest,
     config: CustomFetchOptions = {},
     options?: AsyncDataOptions<ResT, DataT, PickKeys, DefaultT>

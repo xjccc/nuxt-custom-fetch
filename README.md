@@ -222,6 +222,7 @@ The return value follows Nuxt's `AsyncData<...>` shape and can use the same `def
 ## Typing Notes
 
 - `CustomFetch` mirrors Nuxt async-data generics closely enough for `default`, `pick`, and `transform` to narrow the final `data` type.
+- `error` defaults to `NuxtError<unknown> | undefined`, like `useAsyncData`; the second generic (`NuxtErrorDataT`) types `error.data`.
 - Playground examples and type tests cover explicit generics, default values, and reactive arguments.
 - If you want a custom wrapper with only shared defaults, Nuxt's `createUseFetch` and `createUseAsyncData` remain the simpler choice.
 
