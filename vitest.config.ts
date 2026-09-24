@@ -7,6 +7,7 @@ export default {
   },
   resolve: {
     alias: {
+      '#app': fileURLToPath(new URL('./test/mocks/nuxt-app.ts', import.meta.url)),
       '#imports': fileURLToPath(new URL('./test/mocks/nuxt-imports.ts', import.meta.url)),
       '#build/nuxt.config.mjs': fileURLToPath(new URL('./test/mocks/nuxt-config.ts', import.meta.url))
     }

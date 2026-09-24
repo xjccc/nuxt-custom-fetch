@@ -2,7 +2,8 @@ import type { NitroFetchRequest } from 'nitropack'
 import type { AsyncData, AsyncDataOptions, NuxtError } from 'nuxt/app'
 import type { Ref } from '#imports'
 import type { CustomFetchOptions, CustomFetchRequestOptions, FetchContext, FetchResponse, Interceptors, KeysOf, PickFrom, ResolvedCustomFetchOptions } from './type'
-import { hash, serialize } from 'ohash'
+import { serialize } from 'ohash'
+import { hashKey } from '#app'
 // @ts-expect-error virtual file
 import { asyncDataDefaults, granularCachedData, pendingWhenIdle } from '#build/nuxt.config.mjs'
 import { clearNuxtData, computed, createError, getCurrentInstance, getCurrentScope, isRef, onScopeDispose, reactive, ref, shallowRef, toValue, unref, useAsyncData, useNuxtApp, useRequestFetch, useRuntimeConfig, watch } from '#imports'
@@ -71,7 +72,6 @@ type ResolvedRequestFetchOptions = ResolvedCustomFetchOptions & {
 const _cachedController = new Map<string, AbortController>()
 const _cachedClientAsyncData = new Map<string, ClientAsyncDataEntry>()
 const MAX_UNSCOPED_CLIENT_ASYNC_DATA_ENTRIES = 50
-const REPLACE_REG = /[-_]/g
 
 function createAbortController () {
   return typeof AbortController !== 'undefined' ? new AbortController() : undefined
@@ -368,9 +368,9 @@ export class CustomFetch {
       }))
     }
 
-    const hashKey = hash(hashValue).replace(REPLACE_REG, '').slice(0, 10)
+    const defaultKey = hashKey(hashValue).slice(0, 10)
 
-    const key = computed(() => toValue(resolvedConfig.key) || hashKey)
+    const key = computed(() => toValue(resolvedConfig.key) || defaultKey)
 
     const executeRequest = (executeOptions: AsyncDataExecuteOptions = {}) => {
       const timeout = executeOptions.timeout ?? options.timeout

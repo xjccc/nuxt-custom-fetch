@@ -1,7 +1,7 @@
 import type { MaybeRef } from '#imports'
 import type { CustomFetchOptions, FetchMethod, MaybeRefDeep } from './type'
 import { isPlainObject } from '@vue/shared'
-import { hash } from 'ohash'
+import { hashKey } from '#app'
 import { toValue } from '#imports'
 
 export function Noop () { }
@@ -101,10 +101,10 @@ export function generateOptionSegments<_ResT> (opts: CustomFetchOptions & { meth
   if (opts.body !== undefined) {
     const value = resolveReactiveValue(toValue(opts.body))
     if (!value) {
-      segments.push(hash(value))
+      segments.push(hashKey(value))
     }
     else if (value instanceof ArrayBuffer) {
-      segments.push(hash(Object.fromEntries(Array.from(new Uint8Array(value).entries(), ([key, item]) => [key, item.toString()]))))
+      segments.push(hashKey(Object.fromEntries(Array.from(new Uint8Array(value).entries(), ([key, item]) => [key, item.toString()]))))
     }
     else if (isFormDataValue(value)) {
       const entries: Array<[string, string]> = []
@@ -112,14 +112,18 @@ export function generateOptionSegments<_ResT> (opts: CustomFetchOptions & { meth
         const [key, val] = entry
         entries.push([key, isFileValue(val) ? `${val.name}:${val.size}:${val.lastModified}` : val])
       }
-      segments.push(hash(entries))
+      segments.push(hashKey(entries))
+    }
+    // Nuxt's `hashKey` cannot serialize URLSearchParams, so hash its entries like FormData
+    else if (isURLSearchParamsValue(value)) {
+      segments.push(hashKey(Array.from(value.entries())))
     }
     else if (isPlainObject(value)) {
-      segments.push(hash(resolveReactiveValue(value)))
+      segments.push(hashKey(resolveReactiveValue(value)))
     }
     else {
       try {
-        segments.push(hash(value))
+        segments.push(hashKey(value))
       }
       catch {
         console.warn('[Custom Fetch] Failed to hash body', value)
