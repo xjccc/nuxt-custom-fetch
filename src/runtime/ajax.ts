@@ -201,20 +201,20 @@ export class CustomFetch {
     const query = resolveReactiveValue(toValue(config.query)) || {}
     const params = resolveReactiveValue(toValue(config.params)) || {}
     const baseHandler = handler || this._baseHandler
-    const _name = Object.keys(query).length ? 'query' : 'params'
     const mergeObj = {
       ...params,
       ...query
     }
+    // `params` is ofetch's deprecated alias of `query`, so the merged result is always sent as `query`
     if (useHandler && baseHandler && typeof baseHandler === 'function') {
-      return { [_name]: baseHandler(mergeObj) }
+      return { query: baseHandler(mergeObj) }
     }
 
-    return { [_name]: { ...mergeObj } }
+    return { query: { ...mergeObj } }
   }
 
   private resolveFetchConfig (config: ResolvableRequestFetchOptions, timeout?: number): ResolvedRequestFetchOptions {
-    const { handler: _handler, useHandler: _useHandler, ...rawConfig } = config
+    const { handler: _handler, useHandler: _useHandler, params: _params, ...rawConfig } = config
     const baseConfig = this.baseConfig(config)
     const baseURL = toValue(rawConfig.baseURL)
     const body = resolveReactiveValue<ResolvedRequestFetchOptions['body']>(toValue(rawConfig.body))
@@ -222,8 +222,7 @@ export class CustomFetch {
     const cache = typeof _cache === 'boolean' ? undefined : _cache
     const headers = resolveReactiveValue<ResolvedRequestFetchOptions['headers']>(toValue(rawConfig.headers))
     const method = toValue(rawConfig.method)
-    const params = resolveReactiveValue<ResolvedRequestFetchOptions['params']>(toValue(baseConfig.params ?? rawConfig.params))
-    const query = resolveReactiveValue<ResolvedRequestFetchOptions['query']>(toValue(baseConfig.query ?? rawConfig.query))
+    const query = resolveReactiveValue<ResolvedRequestFetchOptions['query']>(toValue(baseConfig.query))
 
     return {
       ...rawConfig,
@@ -233,7 +232,6 @@ export class CustomFetch {
       cache,
       headers,
       method,
-      params,
       query,
       timeout
     }
@@ -300,7 +298,6 @@ export class CustomFetch {
         headers: initialFetchConfig.headers,
         key: toValue(resolvedConfig.key),
         method: initialFetchConfig.method,
-        params: initialFetchConfig.params,
         query: initialFetchConfig.query
       }).filter(([, value]) => value !== undefined))
 

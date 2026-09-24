@@ -184,9 +184,8 @@ The remaining helper names follow the same rule: `getPageList` is the plain non-
 ### Handler behavior
 
 - `handler` receives a merged object built from `params` and `query`.
-- If `query` is present, the processed output is written back to `query`.
-- Otherwise the processed output is written back to `params`.
-- Set `useHandler: false` on a request to bypass preprocessing.
+- The processed output is always sent as `query`. `params` is ofetch's deprecated alias of `query`, so it is only read as input and never forwarded on its own.
+- Set `useHandler: false` on a request to bypass preprocessing; the merged object is still sent as `query`.
 
 ### Client compatibility mode
 

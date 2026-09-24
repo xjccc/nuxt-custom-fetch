@@ -73,12 +73,13 @@ describe('customFetch', () => {
         authorization: 'Bearer token'
       },
       method: 'GET',
-      params: {
+      query: {
         page: 1,
         token: 'abc'
       },
       timeout: 250
     })
+    expect(fetchOptions.params).toBeUndefined()
     expect(fetchOptions.signal).toBeInstanceOf(AbortSignal)
 
     await fetchOptions.onRequest({
@@ -909,9 +910,6 @@ describe('customFetch', () => {
     expect(data.value).toEqual({ ok: true })
     expect(requestFetch).toHaveBeenCalledWith('/search', expect.objectContaining({
       method: 'GET',
-      params: {
-        page: 1
-      },
       query: {
         page: 1,
         search: 'nuxt'
@@ -919,7 +917,7 @@ describe('customFetch', () => {
     }))
 
     const [, fetchOptions] = requestFetch.mock.calls.at(-1) as [string, Record<string, any>]
-    expect(fetchOptions.params).toEqual({ page: 1 })
+    expect(fetchOptions.params).toBeUndefined()
     expect(fetchOptions.query.token).toBeUndefined()
   })
 
@@ -947,7 +945,7 @@ describe('customFetch', () => {
     })
 
     const [, fetchOptions] = requestFetch.mock.calls.at(-1) as [string, Record<string, any>]
-    expect(fetchOptions.params).toEqual({ page: 1 })
+    expect(fetchOptions.params).toBeUndefined()
     expect(fetchOptions.query).toEqual({
       page: 1,
       search: 'nuxt'
@@ -991,7 +989,7 @@ describe('customFetch', () => {
     await asyncData.execute({ cause: 'initial' })
 
     const [, firstFetchOptions] = requestFetch.mock.calls[0] as [string, Record<string, any>]
-    expect(firstFetchOptions.params).toEqual({ page: 1 })
+    expect(firstFetchOptions.params).toBeUndefined()
     expect(firstFetchOptions.query).toEqual({
       page: 1,
       search: 'nuxt',
@@ -1004,7 +1002,7 @@ describe('customFetch', () => {
     await asyncData.refresh({ cause: 'refresh:manual' })
 
     const [, secondFetchOptions] = requestFetch.mock.calls[1] as [string, Record<string, any>]
-    expect(secondFetchOptions.params).toEqual({ page: 2 })
+    expect(secondFetchOptions.params).toBeUndefined()
     expect(secondFetchOptions.query).toEqual({
       page: 2,
       search: 'vue',
@@ -1043,14 +1041,48 @@ describe('customFetch', () => {
     expect(data.value).toEqual({ ok: true })
     expect(requestFetch).toHaveBeenCalledWith('/hello', expect.objectContaining({
       method: 'GET',
-      params: {
+      query: {
         page: 1,
         locale: 'zh-CN'
       }
     }))
 
     const [, fetchOptions] = requestFetch.mock.calls.at(-1) as [string, Record<string, any>]
-    expect(fetchOptions.params.token).toBeUndefined()
+    expect(fetchOptions.params).toBeUndefined()
+    expect(fetchOptions.query.token).toBeUndefined()
+  })
+
+  it('sends only the handler output when both params and query are present', async () => {
+    const requestFetch = vi.fn().mockResolvedValue({ ok: true })
+
+    __setRequestFetchImpl(requestFetch)
+    __setUseAsyncDataImpl(async (_key, handler) => {
+      return createAsyncDataResult(await handler({}, {
+        signal: new AbortController().signal
+      }))
+    })
+
+    const ajax = new CustomFetch({
+      baseURL: '/api',
+      handler: merged => ({
+        sign: JSON.stringify(merged)
+      })
+    })
+
+    await ajax.get('/list', {
+      params: {
+        page: 1
+      },
+      query: {
+        size: 10
+      }
+    })
+
+    const [, fetchOptions] = requestFetch.mock.calls[0] as [string, Record<string, any>]
+    expect(fetchOptions.query).toEqual({
+      sign: '{"page":1,"size":10}'
+    })
+    expect(fetchOptions.params).toBeUndefined()
   })
 
   it('composes response interceptors from instance and request config', async () => {
