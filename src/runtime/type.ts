@@ -1,5 +1,5 @@
-import type { MaybeRefOrGetter } from '#imports'
 import type { FetchOptions } from 'ofetch'
+import type { MaybeRefOrGetter } from '#imports'
 
 export type { FetchContext, FetchResponse } from 'ofetch'
 

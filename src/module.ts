@@ -1,13 +1,15 @@
+import type { NuxtModule } from 'nuxt/schema'
 import { fileURLToPath } from 'node:url'
 import { addImports, createResolver, defineNuxtModule } from '@nuxt/kit'
 
 export interface ModuleOptions {}
 
-export default defineNuxtModule<ModuleOptions>({
+// Explicit type keeps the emitted declaration portable (TS2883 with Nuxt 4.5 types).
+const nuxtCustomFetch: NuxtModule<ModuleOptions, ModuleOptions, false> = defineNuxtModule<ModuleOptions>({
   meta: {
     name: 'nuxt-custom-fetch',
     configKey: 'customFetch',
-    version: '>=4.4.0'
+    version: '>=4.5.0'
   },
   defaults: {},
   setup (options, nuxt) {
@@ -20,3 +22,5 @@ export default defineNuxtModule<ModuleOptions>({
     })
   }
 })
+
+export default nuxtCustomFetch

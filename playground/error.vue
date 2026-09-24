@@ -3,8 +3,8 @@
 </template>
 
 <script setup lang="ts">
-import { useError } from '#app'
 import { onMounted } from 'vue'
+import { useError } from '#app'
 
 onMounted(() => {
   const err = useError()

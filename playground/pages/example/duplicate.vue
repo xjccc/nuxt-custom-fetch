@@ -53,19 +53,22 @@
         <p class="caption">
           如果看到同一页触发了两次 start，但只有最后一个结果完成，就说明旧请求已经被取消或丢弃。
         </p>
-        <ul class="log-list">
-          <li v-for="entry in logs" :key="entry">
-            {{ entry }}
-          </li>
-        </ul>
+        <!-- logs carry local timestamps, so render them on the client only to keep hydration consistent -->
+        <ClientOnly>
+          <ul class="log-list">
+            <li v-for="entry in logs" :key="entry">
+              {{ entry }}
+            </li>
+          </ul>
+        </ClientOnly>
       </article>
     </section>
   </main>
 </template>
 
 <script setup lang="ts">
-import { CustomFetch } from '#imports'
 import { ref, watch } from 'vue'
+import { CustomFetch } from '#imports'
 
 const page = ref(1)
 const logs = ref<string[]>([])

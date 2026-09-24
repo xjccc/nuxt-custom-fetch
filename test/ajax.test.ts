@@ -1,6 +1,6 @@
 import type { AsyncDataOptions } from 'nuxt/app'
-import { ref } from '#imports'
 import { computed } from 'vue'
+import { ref } from '#imports'
 import { CustomFetch } from '../src/runtime/ajax'
 import { __setPendingWhenIdle, asyncDataDefaults } from './mocks/nuxt-config'
 import { __getNuxtMockState, __setNuxtApp, __setRequestFetchImpl, __setRuntimeConfig, __setUseAsyncDataImpl } from './mocks/nuxt-imports'
@@ -73,12 +73,13 @@ describe('customFetch', () => {
         authorization: 'Bearer token'
       },
       method: 'GET',
-      params: {
+      query: {
         page: 1,
         token: 'abc'
       },
       timeout: 250
     })
+    expect(fetchOptions.params).toBeUndefined()
     expect(fetchOptions.signal).toBeInstanceOf(AbortSignal)
 
     await fetchOptions.onRequest({
@@ -231,7 +232,7 @@ describe('customFetch', () => {
 
   it('logs request details when showLogs is enabled on the client', async () => {
     const requestFetch = vi.fn().mockResolvedValue({ ok: true })
-    const warn = vi.spyOn(console, 'warn')
+    const warn = vi.spyOn(console, 'info')
 
     __setRequestFetchImpl(requestFetch)
     __setUseAsyncDataImpl(async (_key, handler) => {
@@ -261,7 +262,7 @@ describe('customFetch', () => {
 
   it('does not log request details when showLogs is disabled', async () => {
     const requestFetch = vi.fn().mockResolvedValue({ ok: true })
-    const warn = vi.spyOn(console, 'warn')
+    const warn = vi.spyOn(console, 'info')
 
     __setRequestFetchImpl(requestFetch)
     __setUseAsyncDataImpl(async (_key, handler) => {
@@ -286,7 +287,7 @@ describe('customFetch', () => {
 
   it('lets request showLogs override the instance setting', async () => {
     const requestFetch = vi.fn().mockResolvedValue({ ok: true })
-    const warn = vi.spyOn(console, 'warn')
+    const warn = vi.spyOn(console, 'info')
 
     __setRequestFetchImpl(requestFetch)
     __setUseAsyncDataImpl(async (_key, handler) => {
@@ -312,7 +313,7 @@ describe('customFetch', () => {
 
   it('logs computed keys and params as resolved values', async () => {
     const requestFetch = vi.fn().mockResolvedValue({ ok: true })
-    const warn = vi.spyOn(console, 'warn')
+    const warn = vi.spyOn(console, 'info')
 
     __setRequestFetchImpl(requestFetch)
     __setUseAsyncDataImpl(async (_key, handler) => {
@@ -405,15 +406,21 @@ describe('customFetch', () => {
   it('reuses existing nuxt asyncData entries on the client after hydration', async () => {
     const requestFetch = vi.fn()
     const useAsyncData = vi.fn()
-    const execute = vi.fn(async () => {})
+    let resolveExecute: (() => void) | undefined
+    const execute = vi.fn<(opts?: unknown) => Promise<void>>()
+      .mockImplementationOnce(() => new Promise<void>((resolve) => {
+        resolveExecute = resolve
+      }))
+      .mockResolvedValue(undefined)
+    const abortController = new AbortController()
+    // mirrors Nuxt's internal `_asyncData` entry: no `refresh`/`clear` and not a promise
     const sharedAsyncData = {
+      _abortController: abortController as AbortController | undefined,
       _deps: 1,
-      clear: vi.fn(),
       data: ref({ ok: true }),
       error: ref(undefined),
       execute,
       pending: ref(false),
-      refresh: execute,
       status: ref('success')
     }
 
@@ -430,19 +437,77 @@ describe('customFetch', () => {
       baseURL: '/api',
       showLogs: false
     })
-    const asyncData = await ajax.get<{ ok: boolean }>('/hello', {
+    let settled = false
+    const request = ajax.get<{ ok: boolean }>('/hello', {
       key: 'shared:key'
     }, {
       dedupe: 'defer'
+    }).then((asyncData) => {
+      settled = true
+      return asyncData
     })
 
-    expect(asyncData).toBe(sharedAsyncData)
+    await new Promise(resolve => setTimeout(resolve, 0))
+    expect(settled).toBe(false)
+
+    resolveExecute?.()
+    const asyncData = await request
+
+    expect(asyncData.data).toBe(sharedAsyncData.data)
+    expect(asyncData.status).toBe(sharedAsyncData.status)
     expect(execute).toHaveBeenCalledWith({
       cause: 'initial',
       dedupe: 'defer'
     })
+
+    await asyncData.refresh({ dedupe: 'cancel' })
+
+    expect(execute).toHaveBeenLastCalledWith({ dedupe: 'cancel' })
+
+    asyncData.clear()
+
+    expect(abortController.signal.aborted).toBe(true)
+    expect(sharedAsyncData._abortController).toBeUndefined()
+    expect(__getNuxtMockState().clearNuxtDataCalls).toEqual(['shared:key'])
     expect(requestFetch).not.toHaveBeenCalled()
     expect(useAsyncData).not.toHaveBeenCalled()
+  })
+
+  it('does not execute reused nuxt asyncData entries when immediate is false', async () => {
+    const execute = vi.fn(async () => {})
+    const sharedAsyncData = {
+      _deps: 1,
+      data: ref('shared'),
+      error: ref(undefined),
+      execute,
+      pending: ref(false),
+      status: ref('success')
+    }
+
+    __setNuxtApp({
+      isHydrating: false,
+      _asyncData: {
+        'shared:key': sharedAsyncData
+      }
+    })
+    __setRequestFetchImpl(vi.fn())
+
+    const ajax = new CustomFetch({
+      baseURL: '/api',
+      showLogs: false
+    })
+    const { data, refresh } = await ajax.get<string>('/hello', {
+      key: 'shared:key'
+    }, {
+      immediate: false
+    })
+
+    expect(data.value).toBe('shared')
+    expect(execute).not.toHaveBeenCalled()
+
+    await refresh()
+
+    expect(execute).toHaveBeenCalledTimes(1)
   })
 
   it('does not reuse hydrated asyncData when only query changes', async () => {
@@ -845,9 +910,6 @@ describe('customFetch', () => {
     expect(data.value).toEqual({ ok: true })
     expect(requestFetch).toHaveBeenCalledWith('/search', expect.objectContaining({
       method: 'GET',
-      params: {
-        page: 1
-      },
       query: {
         page: 1,
         search: 'nuxt'
@@ -855,7 +917,7 @@ describe('customFetch', () => {
     }))
 
     const [, fetchOptions] = requestFetch.mock.calls.at(-1) as [string, Record<string, any>]
-    expect(fetchOptions.params).toEqual({ page: 1 })
+    expect(fetchOptions.params).toBeUndefined()
     expect(fetchOptions.query.token).toBeUndefined()
   })
 
@@ -883,7 +945,7 @@ describe('customFetch', () => {
     })
 
     const [, fetchOptions] = requestFetch.mock.calls.at(-1) as [string, Record<string, any>]
-    expect(fetchOptions.params).toEqual({ page: 1 })
+    expect(fetchOptions.params).toBeUndefined()
     expect(fetchOptions.query).toEqual({
       page: 1,
       search: 'nuxt'
@@ -927,7 +989,7 @@ describe('customFetch', () => {
     await asyncData.execute({ cause: 'initial' })
 
     const [, firstFetchOptions] = requestFetch.mock.calls[0] as [string, Record<string, any>]
-    expect(firstFetchOptions.params).toEqual({ page: 1 })
+    expect(firstFetchOptions.params).toBeUndefined()
     expect(firstFetchOptions.query).toEqual({
       page: 1,
       search: 'nuxt',
@@ -940,7 +1002,7 @@ describe('customFetch', () => {
     await asyncData.refresh({ cause: 'refresh:manual' })
 
     const [, secondFetchOptions] = requestFetch.mock.calls[1] as [string, Record<string, any>]
-    expect(secondFetchOptions.params).toEqual({ page: 2 })
+    expect(secondFetchOptions.params).toBeUndefined()
     expect(secondFetchOptions.query).toEqual({
       page: 2,
       search: 'vue',
@@ -979,14 +1041,48 @@ describe('customFetch', () => {
     expect(data.value).toEqual({ ok: true })
     expect(requestFetch).toHaveBeenCalledWith('/hello', expect.objectContaining({
       method: 'GET',
-      params: {
+      query: {
         page: 1,
         locale: 'zh-CN'
       }
     }))
 
     const [, fetchOptions] = requestFetch.mock.calls.at(-1) as [string, Record<string, any>]
-    expect(fetchOptions.params.token).toBeUndefined()
+    expect(fetchOptions.params).toBeUndefined()
+    expect(fetchOptions.query.token).toBeUndefined()
+  })
+
+  it('sends only the handler output when both params and query are present', async () => {
+    const requestFetch = vi.fn().mockResolvedValue({ ok: true })
+
+    __setRequestFetchImpl(requestFetch)
+    __setUseAsyncDataImpl(async (_key, handler) => {
+      return createAsyncDataResult(await handler({}, {
+        signal: new AbortController().signal
+      }))
+    })
+
+    const ajax = new CustomFetch({
+      baseURL: '/api',
+      handler: merged => ({
+        sign: JSON.stringify(merged)
+      })
+    })
+
+    await ajax.get('/list', {
+      params: {
+        page: 1
+      },
+      query: {
+        size: 10
+      }
+    })
+
+    const [, fetchOptions] = requestFetch.mock.calls[0] as [string, Record<string, any>]
+    expect(fetchOptions.query).toEqual({
+      sign: '{"page":1,"size":10}'
+    })
+    expect(fetchOptions.params).toBeUndefined()
   })
 
   it('composes response interceptors from instance and request config', async () => {
@@ -1076,7 +1172,7 @@ describe('customFetch', () => {
     expect(requestOnRequestError).toHaveBeenCalledTimes(1)
   })
 
-  it('falls back to client async-data compatibility mode for setup-context errors', async () => {
+  it('falls back to client async-data compatibility mode after hydration', async () => {
     interface FallbackResponse {
       count: number
       extra: string
@@ -1185,8 +1281,9 @@ describe('customFetch', () => {
     const mockState = __getNuxtMockState()
 
     __setRequestFetchImpl(requestFetch)
-    __setUseAsyncDataImpl(() => {
-      throw new Error('requires access to the nuxt instance')
+    __setNuxtApp({
+      isHydrating: false,
+      _asyncData: {}
     })
 
     const ajax = new CustomFetch({
@@ -1219,8 +1316,9 @@ describe('customFetch', () => {
     }))
 
     __setRequestFetchImpl(requestFetch)
-    __setUseAsyncDataImpl(() => {
-      throw new Error('outside of a nuxt instance')
+    __setNuxtApp({
+      isHydrating: false,
+      _asyncData: {}
     })
 
     const ajax = new CustomFetch({
@@ -1248,8 +1346,9 @@ describe('customFetch', () => {
     const requestFetch = vi.fn().mockRejectedValue(new Error('boom'))
 
     __setRequestFetchImpl(requestFetch)
-    __setUseAsyncDataImpl(() => {
-      throw new Error('outside of a plugin')
+    __setNuxtApp({
+      isHydrating: false,
+      _asyncData: {}
     })
 
     const ajax = new CustomFetch({
@@ -1280,8 +1379,9 @@ describe('customFetch', () => {
     asyncDataDefaults.errorValue = undefined
 
     __setRequestFetchImpl(requestFetch)
-    __setUseAsyncDataImpl(() => {
-      throw new Error('outside of a plugin')
+    __setNuxtApp({
+      isHydrating: false,
+      _asyncData: {}
     })
 
     try {
@@ -1320,8 +1420,9 @@ describe('customFetch', () => {
     const mockState = __getNuxtMockState()
 
     __setRequestFetchImpl(requestFetch)
-    __setUseAsyncDataImpl(() => {
-      throw new Error('outside of a plugin')
+    __setNuxtApp({
+      isHydrating: false,
+      _asyncData: {}
     })
 
     const ajax = new CustomFetch({
@@ -1351,8 +1452,9 @@ describe('customFetch', () => {
     const entries: unknown[] = []
 
     __setRequestFetchImpl(requestFetch)
-    __setUseAsyncDataImpl(() => {
-      throw new Error('outside of a plugin')
+    __setNuxtApp({
+      isHydrating: false,
+      _asyncData: {}
     })
 
     const ajax = new CustomFetch({
@@ -1390,8 +1492,9 @@ describe('customFetch', () => {
       .mockResolvedValueOnce({ count: 2 })
 
     __setRequestFetchImpl(requestFetch)
-    __setUseAsyncDataImpl(() => {
-      throw new Error('outside of a nuxt instance')
+    __setNuxtApp({
+      isHydrating: false,
+      _asyncData: {}
     })
 
     const ajax = new CustomFetch({
@@ -1430,8 +1533,9 @@ describe('customFetch', () => {
     const externalController = new AbortController()
 
     __setRequestFetchImpl(requestFetch)
-    __setUseAsyncDataImpl(() => {
-      throw new Error('outside of a plugin')
+    __setNuxtApp({
+      isHydrating: false,
+      _asyncData: {}
     })
 
     const ajax = new CustomFetch({
@@ -1456,17 +1560,19 @@ describe('customFetch', () => {
     expect(asyncData.pending.value).toBe(false)
   })
 
-  it('rethrows non-fallback async-data errors on the client', async () => {
-    __setUseAsyncDataImpl(() => {
-      throw new Error('boom')
-    })
-
+  it('propagates useAsyncData errors instead of falling back', async () => {
     const ajax = new CustomFetch({
       baseURL: '/api',
       showLogs: false
     })
 
-    expect(() => ajax.get('/hello')).toThrow('boom')
+    for (const message of ['boom', 'A composable that requires access to the Nuxt instance was called outside of a plugin, Nuxt hook, Nuxt middleware, or Vue setup function.']) {
+      __setUseAsyncDataImpl(() => {
+        throw new Error(message)
+      })
+
+      expect(() => ajax.get('/hello')).toThrow(message)
+    }
   })
 
   it('refreshes fallback data when the app:data:refresh hook fires', async () => {
@@ -1601,5 +1707,167 @@ describe('customFetch', () => {
     finally {
       __setPendingWhenIdle(false)
     }
+  })
+
+  it.each([
+    {
+      caller: 'component setup',
+      instance: { isMounted: false },
+      processingMiddleware: undefined,
+      usesAsyncData: true
+    },
+    {
+      caller: 'route middleware',
+      instance: null,
+      processingMiddleware: true,
+      usesAsyncData: true
+    },
+    {
+      caller: 'a mounted component',
+      instance: { isMounted: true },
+      processingMiddleware: undefined,
+      usesAsyncData: false
+    },
+    {
+      caller: 'outside components',
+      instance: null,
+      processingMiddleware: undefined,
+      usesAsyncData: false
+    }
+  ])('after hydration, calls from $caller use useAsyncData: $usesAsyncData', async ({ instance, processingMiddleware, usesAsyncData }) => {
+    const requestFetch = vi.fn().mockResolvedValue({ ok: true })
+    const useAsyncData = vi.fn(async (_key: unknown, handler: (...args: any[]) => Promise<unknown>) => {
+      return createAsyncDataResult(await handler({}, {
+        signal: new AbortController().signal
+      }))
+    })
+
+    __getNuxtMockState().currentInstance = instance
+    __setNuxtApp({
+      isHydrating: false,
+      _processingMiddleware: processingMiddleware,
+      _asyncData: {}
+    })
+    __setRequestFetchImpl(requestFetch)
+    __setUseAsyncDataImpl(useAsyncData)
+
+    const ajax = new CustomFetch({
+      baseURL: '/api',
+      showLogs: false
+    })
+    const { data } = await ajax.get<{ ok: boolean }>('/hello')
+
+    expect(data.value).toEqual({ ok: true })
+    expect(useAsyncData).toHaveBeenCalledTimes(usesAsyncData ? 1 : 0)
+    expect(requestFetch).toHaveBeenCalledTimes(1)
+  })
+
+  it('skips fallback requests while enabled is false', async () => {
+    const requestFetch = vi.fn().mockResolvedValue({ ok: true })
+
+    __setNuxtApp({
+      isHydrating: false,
+      _asyncData: {}
+    })
+    __setRequestFetchImpl(requestFetch)
+
+    const ajax = new CustomFetch({
+      baseURL: '/api',
+      showLogs: false
+    })
+    const asyncData = await ajax.get<{ ok: boolean }>('/hello', {
+      key: 'enabled:static'
+    }, {
+      enabled: false
+    })
+
+    expect(asyncData.status.value).toBe('idle')
+    expect(asyncData.pending.value).toBe(false)
+    expect(asyncData.data.value).toBeUndefined()
+
+    await asyncData.refresh()
+
+    expect(requestFetch).not.toHaveBeenCalled()
+  })
+
+  it('cancels the in-flight fallback request when a reactive enabled turns false', async () => {
+    let signal: AbortSignal | undefined
+    const requestFetch = vi.fn((_request: string, options: Record<string, any>) => {
+      signal = options.signal
+      return new Promise(() => {})
+    })
+    const enabled = ref(true)
+    const mockState = __getNuxtMockState()
+
+    __setNuxtApp({
+      isHydrating: false,
+      _asyncData: {}
+    })
+    __setRequestFetchImpl(requestFetch)
+
+    const ajax = new CustomFetch({
+      baseURL: '/api',
+      showLogs: false
+    })
+    const asyncData = await ajax.get('/hello', {
+      key: 'enabled:reactive'
+    }, {
+      enabled,
+      immediate: false
+    })
+
+    void asyncData.execute()
+
+    expect(asyncData.status.value).toBe('pending')
+
+    const enabledWatch = mockState.watchCalls.find(call => typeof call.source === 'function')
+
+    enabled.value = false
+    enabledWatch?.callback(false)
+
+    expect(signal?.aborted).toBe(true)
+    expect((signal?.reason as DOMException).message).toBe('AsyncData request cancelled by `enabled: false`')
+    expect(asyncData.status.value).toBe('idle')
+    expect(asyncData.pending.value).toBe(false)
+
+    await asyncData.refresh()
+
+    expect(requestFetch).toHaveBeenCalledTimes(1)
+  })
+
+  it('cancels the in-flight fallback request when its scope is disposed', async () => {
+    let signal: AbortSignal | undefined
+    const requestFetch = vi.fn((_request: string, options: Record<string, any>) => {
+      signal = options.signal
+      return new Promise(() => {})
+    })
+    const mockState = __getNuxtMockState()
+
+    mockState.currentScope = {}
+    __setNuxtApp({
+      isHydrating: false,
+      _asyncData: {}
+    })
+    __setRequestFetchImpl(requestFetch)
+
+    const ajax = new CustomFetch({
+      baseURL: '/api',
+      showLogs: false
+    })
+    const asyncData = await ajax.get('/hello', {
+      key: 'dispose:key'
+    }, {
+      immediate: false
+    })
+
+    void asyncData.execute()
+
+    for (const dispose of mockState.scopeDisposers) {
+      dispose()
+    }
+
+    expect(signal?.aborted).toBe(true)
+    expect((signal?.reason as DOMException).message).toBe('AsyncData request cancelled by unmount')
+    expect(asyncData.status.value).toBe('idle')
   })
 })

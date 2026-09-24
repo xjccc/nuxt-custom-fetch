@@ -1,5 +1,5 @@
+import { hashKey } from '#app'
 import { ref } from '#imports'
-import { hash } from 'ohash'
 import { generateOptionSegments, Noop, pick, resolveReactiveValue } from '../src/runtime/utils'
 
 describe('noop', () => {
@@ -171,7 +171,7 @@ describe('generateOptionSegments', () => {
       body
     })
 
-    expect(segments.at(-1)).toBe(hash(resolveReactiveValue(body)))
+    expect(segments.at(-1)).toBe(hashKey(resolveReactiveValue(body)))
   })
 
   it('hashes array buffer bodies deterministically', () => {
@@ -182,7 +182,7 @@ describe('generateOptionSegments', () => {
       body
     })
 
-    expect(segments.at(-1)).toBe(hash({
+    expect(segments.at(-1)).toBe(hashKey({
       0: '1',
       1: '2',
       2: '3'
@@ -198,9 +198,40 @@ describe('generateOptionSegments', () => {
       body
     })
 
-    expect(segments.at(-1)).toBe(hash({
-      name: 'Ada'
-    }))
+    expect(segments.at(-1)).toBe(hashKey([
+      ['name', 'Ada']
+    ]))
+  })
+
+  it('hashes URLSearchParams bodies by entries', () => {
+    const segment = (body: URLSearchParams) => generateOptionSegments({
+      method: 'POST',
+      body
+    }).at(-1)
+
+    expect(segment(new URLSearchParams('a=1&b=2'))).toBe(hashKey([['a', '1'], ['b', '2']]))
+    expect(segment(new URLSearchParams('a=1'))).not.toBe(segment(new URLSearchParams('a=2')))
+  })
+
+  it('distinguishes FormData files with the same name and repeated entry keys', () => {
+    function formDataKey (entries: Array<[string, string | File]>) {
+      const body = new FormData()
+      for (const [key, value] of entries) {
+        body.append(key, value)
+      }
+
+      return generateOptionSegments({
+        method: 'POST',
+        body
+      }).at(-1)
+    }
+
+    const avatar = new File(['a'], 'avatar.png', { lastModified: 1 })
+
+    expect(formDataKey([['file', avatar]])).not.toBe(formDataKey([['file', new File(['bb'], 'avatar.png', { lastModified: 1 })]]))
+    expect(formDataKey([['file', avatar]])).not.toBe(formDataKey([['file', new File(['a'], 'avatar.png', { lastModified: 2 })]]))
+    expect(formDataKey([['tag', 'a'], ['tag', 'b']])).not.toBe(formDataKey([['tag', 'c'], ['tag', 'b']]))
+    expect(formDataKey([['file', avatar]])).toBe(formDataKey([['file', new File(['a'], 'avatar.png', { lastModified: 1 })]]))
   })
 
   it('hashes truthy primitive bodies directly', () => {
@@ -209,7 +240,7 @@ describe('generateOptionSegments', () => {
       body: () => 'payload'
     })
 
-    expect(segments.at(-1)).toBe(hash('payload'))
+    expect(segments.at(-1)).toBe(hashKey('payload'))
   })
 
   it('hashes falsy body values returned by getters', () => {
@@ -218,24 +249,24 @@ describe('generateOptionSegments', () => {
       body: () => ''
     })
 
-    expect(segments.at(-1)).toBe(hash(''))
+    expect(segments.at(-1)).toBe(hashKey(''))
   })
 
   it('hashes direct falsy body values', () => {
     expect(generateOptionSegments({
       method: 'POST',
       body: ''
-    }).at(-1)).toBe(hash(''))
+    }).at(-1)).toBe(hashKey(''))
 
     expect(generateOptionSegments({
       method: 'POST',
       body: 0 as any
-    }).at(-1)).toBe(hash(0))
+    }).at(-1)).toBe(hashKey(0))
 
     expect(generateOptionSegments({
       method: 'POST',
       body: false as any
-    }).at(-1)).toBe(hash(false))
+    }).at(-1)).toBe(hashKey(false))
   })
 
   it('does not throw when body hashing runs without optional web constructors', () => {
@@ -246,7 +277,7 @@ describe('generateOptionSegments', () => {
       expect(generateOptionSegments({
         method: 'POST',
         body: 'payload'
-      }).at(-1)).toBe(hash('payload'))
+      }).at(-1)).toBe(hashKey('payload'))
     }
     finally {
       vi.unstubAllGlobals()

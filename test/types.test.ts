@@ -1,3 +1,4 @@
+import type { NuxtError } from 'nuxt/app'
 import type { Ref } from '#imports'
 import type { getDelayedPageMetric, getGreeting, getGreetingByUserId, getPageList, getReactivePageList } from '../playground/api'
 import { ref } from '#imports'
@@ -117,6 +118,11 @@ describe('customFetch types', () => {
     expectTypeOf<CreateItemState['execute']>().toBeFunction()
     expectTypeOf<CreateItemState['clear']>().toBeFunction()
     expectTypeOf<CreateItemState['status']['value']>().toEqualTypeOf<'idle' | 'pending' | 'success' | 'error'>()
+  })
+
+  it('defaults the error type to NuxtError like useAsyncData', () => {
+    expectTypeOf<GetListState['error']['value']>().toEqualTypeOf<NuxtError<unknown> | undefined>()
+    expectTypeOf<CreateItemState['error']['value']>().toEqualTypeOf<NuxtError<unknown> | undefined>()
   })
 
   it('narrows return data when default or pick is provided', () => {
