@@ -56,6 +56,18 @@ function _getStringWithRefDefault () {
   })
 }
 
+function _getStringWithMiddleware () {
+  return ajax.get<string>('/hello', {}, {
+    serialize: false,
+    middleware: [async (next, context) => {
+      expectTypeOf(context.signal).toEqualTypeOf<AbortSignal>()
+      const value = await next()
+      expectTypeOf(value).toEqualTypeOf<string>()
+      return value.toUpperCase()
+    }]
+  })
+}
+
 function _getPickedListRequest () {
   return ajax.get<ListResponse, Error | null, ListResponse, ['nums']>('/get-list', {}, {
     pick: ['nums']
@@ -85,6 +97,7 @@ type GetListState = Awaited<ReturnType<typeof _getListRequest>>
 type CreateItemState = Awaited<ReturnType<typeof _createItemRequest>>
 type GetStringWithDefaultState = Awaited<ReturnType<typeof _getStringWithDefault>>
 type GetStringWithRefDefaultState = Awaited<ReturnType<typeof _getStringWithRefDefault>>
+type GetStringWithMiddlewareState = Awaited<ReturnType<typeof _getStringWithMiddleware>>
 type GetPickedListState = Awaited<ReturnType<typeof _getPickedListRequest>>
 type GetTransformedStringState = Awaited<ReturnType<typeof _getTransformedStringRequest>>
 type GetTransformedStringWithDefaultState = Awaited<ReturnType<typeof _getTransformedStringWithDefault>>
@@ -134,6 +147,10 @@ describe('customFetch types', () => {
   it('preserves transformed data types across default and pick combinations', () => {
     expectTypeOf<GetTransformedStringState['data']['value']>().toEqualTypeOf<{ size: number } | undefined>()
     expectTypeOf<GetTransformedStringWithDefaultState['data']['value']>().toEqualTypeOf<{ size: number }>()
+  })
+
+  it('preserves the response type with Nuxt async-data middleware', () => {
+    expectTypeOf<GetStringWithMiddlewareState['data']['value']>().toEqualTypeOf<string | undefined>()
   })
 
   it('accepts reactive request config values', () => {

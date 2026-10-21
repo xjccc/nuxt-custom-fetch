@@ -393,6 +393,11 @@ export class CustomFetch {
     const nuxtApp = useNuxtApp() as NuxtAppWithAsyncData
 
     const createClientAsyncDataFallback = (): CustomFetchReturnValue<DataT, PickKeys, DefaultT, NuxtErrorDataT> => {
+      // Keep these optional Nuxt 4.6 additions compatible with Nuxt 4.5's public types.
+      const fallbackOptions = options as typeof options & {
+        serialize?: boolean
+        middleware?: Array<(next: () => Promise<ResT>, context: { signal: AbortSignal }) => Promise<ResT>>
+      }
       const _ref = options.deep ? ref : shallowRef
       const usePendingRef = pendingWhenIdle
       const getDefaultValue = () => {
@@ -420,7 +425,7 @@ export class CustomFetch {
       }
 
       const writePayloadData = (value: CustomFetchData<DataT, PickKeys, DefaultT>) => {
-        if (nuxtApp.payload?.data) {
+        if (fallbackOptions.serialize !== false && nuxtApp.payload?.data) {
           nuxtApp.payload.data[key.value] = value
         }
       }
@@ -523,10 +528,38 @@ export class CustomFetch {
           asyncData.status.value = 'pending'
           asyncData.error.value = asyncDataDefaults.errorValue
 
-          activeRequest = executeRequest({
+          const signal = createMergedSignal([controller?.signal], executeOptions?.timeout ?? options.timeout)
+          let run = () => executeRequest({
             ...executeOptions,
-            signal: controller?.signal
+            signal
           })
+          for (let i = (fallbackOptions.middleware?.length ?? 0) - 1; i >= 0; i--) {
+            const middleware = fallbackOptions.middleware![i]!
+            const next = run
+            run = () => Promise.resolve(middleware(next, { signal: signal as AbortSignal }))
+          }
+
+          let request: Promise<ResT>
+          let removeAbortListener: (() => void) | undefined
+          try {
+            request = fallbackOptions.middleware?.length
+              ? new Promise<ResT>((resolve, reject) => {
+                  const onAbort = () => reject(signal?.reason ?? new DOMException('Aborted', 'AbortError'))
+                  if (signal?.aborted) {
+                    onAbort()
+                    return
+                  }
+                  signal?.addEventListener('abort', onAbort, { once: true })
+                  removeAbortListener = () => signal?.removeEventListener('abort', onAbort)
+                  Promise.resolve(run()).then(resolve, reject)
+                })
+              : run()
+          }
+          catch (error) {
+            request = Promise.reject(error)
+          }
+
+          activeRequest = request
             .then(async (result) => {
               if (currentRequestId !== requestId) {
                 return
@@ -560,6 +593,7 @@ export class CustomFetch {
               asyncData.status.value = 'error'
             })
             .finally(() => {
+              removeAbortListener?.()
               if (currentRequestId !== requestId) {
                 return
               }

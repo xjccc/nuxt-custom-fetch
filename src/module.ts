@@ -9,7 +9,9 @@ const nuxtCustomFetch: NuxtModule<ModuleOptions, ModuleOptions, false> = defineN
   meta: {
     name: 'nuxt-custom-fetch',
     configKey: 'customFetch',
-    version: '>=4.5.0'
+    compatibility: {
+      nuxt: '^4.5.0'
+    }
   },
   defaults: {},
   setup (options, nuxt) {

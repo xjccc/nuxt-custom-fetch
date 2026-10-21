@@ -1414,6 +1414,144 @@ describe('customFetch', () => {
     }
   })
 
+  it('runs fallback middleware from outermost to innermost before transform', async () => {
+    const calls: string[] = []
+    const requestFetch = vi.fn(async () => {
+      calls.push('fetch')
+      return { count: 1 }
+    })
+    __setRequestFetchImpl(requestFetch)
+    __setNuxtApp({
+      isHydrating: false,
+      _asyncData: {}
+    })
+
+    interface Result { count: number }
+    const options: AsyncDataOptions<Result> & {
+      middleware: Array<(next: () => Promise<Result>, context: { signal: AbortSignal }) => Promise<Result>>
+    } = {
+      middleware: [
+        async (next, context) => {
+          expect(context.signal).toBeInstanceOf(AbortSignal)
+          calls.push('outer:before')
+          const value = await next()
+          calls.push('outer:after')
+          return { count: value.count + 1 }
+        },
+        async (next) => {
+          calls.push('inner:before')
+          const value = await next()
+          calls.push('inner:after')
+          return { count: value.count + 1 }
+        }
+      ],
+      transform: (value) => {
+        calls.push('transform')
+        return { count: value.count * 2 }
+      }
+    }
+    const ajax = new CustomFetch({ showLogs: false })
+    const asyncData = await ajax.get<Result>('/middleware-order', {}, options)
+
+    expect(asyncData.data.value).toEqual({ count: 6 })
+    expect(calls).toEqual(['outer:before', 'inner:before', 'fetch', 'inner:after', 'outer:after', 'transform'])
+  })
+
+  it('allows fallback middleware to short-circuit the request', async () => {
+    const requestFetch = vi.fn()
+    const innerMiddleware = vi.fn(async () => ({ count: 1 }))
+    __setRequestFetchImpl(requestFetch)
+    __setNuxtApp({
+      isHydrating: false,
+      _asyncData: {}
+    })
+    const options: AsyncDataOptions<{ count: number }> & {
+      middleware: Array<() => Promise<{ count: number }>>
+    } = {
+      middleware: [async () => ({ count: 7 }), innerMiddleware]
+    }
+    const ajax = new CustomFetch({ showLogs: false })
+    const asyncData = await ajax.get<{ count: number }>('/middleware-short-circuit', {}, options)
+
+    expect(asyncData.data.value).toEqual({ count: 7 })
+    expect(requestFetch).not.toHaveBeenCalled()
+    expect(innerMiddleware).not.toHaveBeenCalled()
+  })
+
+  it('captures synchronous fallback middleware errors', async () => {
+    __setNuxtApp({
+      isHydrating: false,
+      _asyncData: {}
+    })
+    const options: AsyncDataOptions<string> & { middleware: Array<() => Promise<string>> } = {
+      middleware: [() => { throw new Error('middleware failed') }]
+    }
+    const asyncData = await new CustomFetch({ showLogs: false }).get<string>('/middleware-error', {}, options)
+
+    expect(asyncData.status.value).toBe('error')
+    expect(asyncData.error.value?.message).toBe('middleware failed')
+    expect(asyncData.pending.value).toBe(false)
+  })
+
+  it.each(['abort', 'timeout'] as const)('settles waiting fallback middleware on %s and ignores its late result', async (cause) => {
+    let resolveMiddleware: ((value: string) => void) | undefined
+    let middlewareSignal: AbortSignal | undefined
+    const requestFetch = vi.fn()
+    __setRequestFetchImpl(requestFetch)
+    __setNuxtApp({
+      isHydrating: false,
+      _asyncData: {}
+    })
+    const options: AsyncDataOptions<string> & {
+      middleware: Array<(next: () => Promise<string>, context: { signal: AbortSignal }) => Promise<string>>
+    } = {
+      immediate: false,
+      middleware: [(_next, context) => {
+        middlewareSignal = context.signal
+        return new Promise<string>((resolve) => {
+          resolveMiddleware = resolve
+        })
+      }]
+    }
+    const asyncData = await new CustomFetch({ showLogs: false }).get<string>('/middleware-cancel', {}, options)
+    const controller = new AbortController()
+    const pending = asyncData.execute(cause === 'abort' ? { signal: controller.signal } : { timeout: 1 })
+    if (cause === 'abort') {
+      controller.abort()
+    }
+    await pending
+
+    expect(middlewareSignal?.aborted).toBe(true)
+    expect(asyncData.status.value).toBe(cause === 'abort' ? 'idle' : 'error')
+    expect(asyncData.pending.value).toBe(false)
+    resolveMiddleware?.('late result')
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(asyncData.data.value).toBeUndefined()
+    expect(requestFetch).not.toHaveBeenCalled()
+  })
+
+  it.each([false, true])('keeps fallback data out of payload with serialize:false (cached: %s)', async (cached) => {
+    const result = { count: 4 }
+    const requestFetch = vi.fn().mockResolvedValue(result)
+    __setRequestFetchImpl(requestFetch)
+    __setNuxtApp({
+      isHydrating: false,
+      _asyncData: {}
+    })
+    const options: AsyncDataOptions<typeof result> & { serialize: boolean } = {
+      serialize: false,
+      getCachedData: () => cached ? result : undefined
+    }
+    const ajax = new CustomFetch({ showLogs: false })
+    const asyncData = await ajax.get<typeof result>('/no-serialize', { key: 'no-serialize' }, options)
+
+    expect(asyncData.data.value).toEqual(result)
+    expect(asyncData.status.value).toBe('success')
+    expect(__getNuxtMockState().nuxtApp.payload.data).not.toHaveProperty('no-serialize')
+    expect(requestFetch).toHaveBeenCalledTimes(cached ? 0 : 1)
+  })
+
   it('disposes fallback watchers on clear when there is no active scope', async () => {
     const requestFetch = vi.fn().mockResolvedValue({ count: 1 })
     const key = ref('fallback:clear:1')

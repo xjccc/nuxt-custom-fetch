@@ -14,8 +14,10 @@ Use `CustomFetch` when you specifically need an extra request layer on top of th
 
 ## Compatibility
 
-- `v4`: Nuxt `>= 4.5.0`
+- `v4`: Nuxt `^4.5.0` (Nuxt 4 only)
 - `v2`: Nuxt `3.0.0` to `3.16.x`
+
+The development playground targets Nuxt `4.6.2` and Vue `3.5.44`. Nuxt `4.6.2` requires Node.js `^22.22.3 || ^24.15.0 || >=26.0.0`. Nuxt 5 is still in development and is not included in this module's compatibility range.
 
 ## Current Maintenance Summary
 
@@ -26,8 +28,9 @@ The current implementation is maintained around these guarantees:
 - reactive `key`, `baseURL`, `params`, `query`, `headers`, `body`, and `cache` values are resolved before each request
 - generated keys are derived with Nuxt's `hashKey` (the same digest `useFetch` uses) and include both `params` and `query`, which avoids stale client reuse when only one side changes
 - same-key client compatibility requests share one async-data bucket, so `dedupe: 'cancel'` can abort the previous pending request
-- the client compatibility path mirrors Nuxt 4 async-data behavior: `pending` follows the `pendingWhenIdle` config, `refreshNuxtData()` (the `app:data:refresh` hook) re-runs fallback requests, `getCachedData` is honored and successful data is written back to `nuxtApp.payload.data`
+- the client compatibility path mirrors Nuxt 4 async-data behavior: `pending` follows the `pendingWhenIdle` config, `refreshNuxtData()` (the `app:data:refresh` hook) re-runs fallback requests, `getCachedData` is honored and successful data is written back to `nuxtApp.payload.data` unless `serialize: false` is set
 - the client compatibility path honors Nuxt 4.5's `enabled` option (a reactive `enabled` turning `false` cancels the in-flight request) and cancels an in-flight request when its owning scope is disposed
+- on Nuxt 4.6, the client compatibility path also honors async-data `middleware` (first entry outermost, before `transform`/`pick`) and `serialize: false`, including cached results
 - timeouts and external abort signals are merged into one request signal (via `AbortSignal.timeout`/`AbortSignal.any` semantics), key watchers are only created for reactive keys, and a key change re-runs the request when `immediate`, prior data, or an in-flight request is present
 - Vitest runtime tests and TypeScript type tests cover the wrapper behavior
 
@@ -41,7 +44,7 @@ The current implementation is maintained around these guarantees:
 - param or query preprocessing through `handler`
 - one request API that still works after mount on the client
 
-If all you need is a typed composable with shared defaults, prefer Nuxt's official factories:
+If all you need is a typed composable with shared defaults, prefer Nuxt's official factories. Nuxt 4.6 also adds `defineUseFetchAddon` and `defineUseAsyncDataAddon` for reusable options, middleware, and return-value extensions:
 
 ```ts
 export const useAPI = createUseFetch({
@@ -60,7 +63,7 @@ export const useCachedData = createUseAsyncData({
 - After hydration on the client, calls made outside component setup (event handlers, lifecycle hooks such as `onMounted`, watchers) fall back to a compatibility mode. This is the same condition under which Nuxt warns "Component is already mounted".
 - The compatibility mode still exposes `data`, `error`, `status`, `pending`, `refresh`, `execute`, and `clear`.
 - The compatibility mode is not a full SSR payload or cache replacement.
-- Calls that intentionally share the same `key` should keep `handler`, `deep`, `transform`, `pick`, `getCachedData`, and `default` consistent, matching Nuxt's keyed async-data rules.
+- Calls that intentionally share the same `key` should keep `handler`, `deep`, `transform`, `pick`, `getCachedData`, and `default` consistent, matching Nuxt's keyed async-data rules. On Nuxt 4.6, keep `middleware` and `serialize` consistent too.
 
 ## Installation
 
@@ -165,7 +168,7 @@ The remaining helper names follow the same rule: `getPageList` is the plain non-
 
 ## Upgrading From 4.4.x
 
-- Nuxt `>= 4.5.0` is required.
+- Nuxt `^4.5.0` is required.
 - Calls made in `setup` during client-side navigation now go through `useAsyncData`, so `lazy: true` no longer blocks navigation and `server`/`enabled` follow Nuxt's rules. Calls from event handlers, `onMounted`, or watchers still use the compatibility mode.
 - Errors thrown by `useAsyncData` are no longer swallowed and turned into a fallback.
 - Requests are sent with `query` only; `params` is merged into it. Interceptors still see `options.params`, which ofetch mirrors from `query`.
@@ -227,7 +230,7 @@ Available methods:
 - `ajax.post(url, config?, asyncDataOptions?)`
 - `ajax.request(url, { method, ...config }, asyncDataOptions?)`
 
-The return value follows Nuxt's `AsyncData<...>` shape and can use the same `default`, `pick`, `transform`, `watch`, `dedupe`, `timeout`, and `enabled` options you already know from `useAsyncData`.
+The return value follows Nuxt's `AsyncData<...>` shape and can use the same `default`, `pick`, `transform`, `watch`, `dedupe`, `timeout`, and `enabled` options you already know from `useAsyncData`. Nuxt 4.6 additionally provides `serialize` and `middleware`.
 
 `showLogs` defaults to `true` in development and prints each client request with `console.info` (real problems such as an unserializable body still use `console.warn`). Set `showLogs: false` to silence it.
 
@@ -256,6 +259,9 @@ The return value follows Nuxt's `AsyncData<...>` shape and can use the same `def
 
 ## References
 
+- https://github.com/nuxt/nuxt/releases/tag/v4.6.0
+- https://github.com/nuxt/nuxt/releases/tag/v4.6.2
+- https://nuxt.com/docs/4.x/api/utils/define-use-fetch-addon
 - https://nuxt.com/docs/4.x/api/composables/create-use-async-data
 - https://nuxt.com/docs/4.x/api/composables/create-use-fetch
 - https://nuxt.com/docs/4.x/api/composables/use-async-data
