@@ -1,5 +1,17 @@
 # nuxt-custom-fetch
 
+## v4.6.0
+
+[compare changes](https://github.com/xjccc/nuxt-custom-fetch/compare/v4.5.0...v4.6.0)
+
+### 🚀 Enhancements
+
+- **main:** 对齐 Nuxt 4.6 请求语义并升级依赖 ([2da25bc](https://github.com/xjccc/nuxt-custom-fetch/commit/2da25bc))
+
+### ❤️ Contributors
+
+- Xjccc <546534045@qq.com>
+
 ## v4.5.0
 
 [compare changes](https://github.com/xjccc/nuxt-custom-fetch/compare/v4.4.8...v4.5.0)
