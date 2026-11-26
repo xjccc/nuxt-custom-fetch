@@ -17,7 +17,7 @@ Use `CustomFetch` when you specifically need an extra request layer on top of th
 - `v4`: Nuxt `^4.5.0` (Nuxt 4 only)
 - `v2`: Nuxt `3.0.0` to `3.16.x`
 
-The development playground targets Nuxt `4.6.2` and Vue `3.5.44`. Nuxt `4.6.2` requires Node.js `^22.22.3 || ^24.15.0 || >=26.0.0`. Nuxt 5 is still in development and is not included in this module's compatibility range.
+The development playground targets Nuxt `4.7.0` and Vue `3.5.46`. Nuxt `4.7.0` requires Node.js `^22.22.3 || ^24.15.0 || >=26.0.0`.
 
 ## Current Maintenance Summary
 
@@ -27,7 +27,8 @@ The current implementation is maintained around these guarantees:
 - public method generics follow Nuxt `AsyncData` typing more closely
 - reactive `key`, `baseURL`, `params`, `query`, `headers`, `body`, and `cache` values are resolved before each request
 - generated keys are derived with Nuxt's `hashKey` (the same digest `useFetch` uses) and include both `params` and `query`, which avoids stale client reuse when only one side changes
-- same-key client compatibility requests share one async-data bucket, so `dedupe: 'cancel'` can abort the previous pending request
+- same-key calls after mount share request state. Clearing or replacing a request prevents its result from overwriting that state, including while an asynchronous `transform` is running
+- after hydration, the default cache uses prerendered data for the initial load. Changes to watched sources fetch fresh data
 - the client compatibility path mirrors Nuxt 4 async-data behavior: `pending` follows the `pendingWhenIdle` config, `refreshNuxtData()` (the `app:data:refresh` hook) re-runs fallback requests, `getCachedData` is honored and successful data is written back to `nuxtApp.payload.data` unless `serialize: false` is set
 - the client compatibility path honors Nuxt 4.5's `enabled` option (a reactive `enabled` turning `false` cancels the in-flight request) and cancels an in-flight request when its owning scope is disposed
 - on Nuxt 4.6, the client compatibility path also honors async-data `middleware` (first entry outermost, before `transform`/`pick`) and `serialize: false`, including cached results
@@ -260,7 +261,7 @@ The return value follows Nuxt's `AsyncData<...>` shape and can use the same `def
 ## References
 
 - https://github.com/nuxt/nuxt/releases/tag/v4.6.0
-- https://github.com/nuxt/nuxt/releases/tag/v4.6.2
+- https://github.com/nuxt/nuxt/releases/tag/v4.7.0
 - https://nuxt.com/docs/4.x/api/utils/define-use-fetch-addon
 - https://nuxt.com/docs/4.x/api/composables/create-use-async-data
 - https://nuxt.com/docs/4.x/api/composables/create-use-fetch

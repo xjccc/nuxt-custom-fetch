@@ -1,6 +1,6 @@
 import type { NuxtModule } from 'nuxt/schema'
 import { fileURLToPath } from 'node:url'
-import { addImports, createResolver, defineNuxtModule } from '@nuxt/kit'
+import { addImports, createResolver, defineNuxtModule } from 'nuxt/kit'
 
 export interface ModuleOptions {}
 

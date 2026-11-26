@@ -1,4 +1,6 @@
 import type { AsyncDataOptions } from 'nuxt/app'
+import { getEventListeners } from 'node:events'
+import { setImmediate } from 'node:timers/promises'
 import { computed } from 'vue'
 import { ref } from '#imports'
 import { CustomFetch } from '../src/runtime/ajax'
@@ -16,6 +18,22 @@ function createAsyncDataResult<DataT> (data: DataT) {
     refresh: execute,
     execute,
     clear: vi.fn()
+  }
+}
+
+function mockPendingClientFetch (staticData: Record<string, string> = {}) {
+  __setNuxtApp({
+    isHydrating: false,
+    _asyncData: {},
+    static: { data: staticData }
+  })
+  const { promise, resolve } = Promise.withResolvers<string>()
+  const fetch = vi.fn<(url: string, options: { signal: AbortSignal }) => Promise<string>>()
+    .mockReturnValue(promise)
+  __setRequestFetchImpl(fetch)
+  return {
+    fetch,
+    resolve
   }
 }
 
@@ -1243,7 +1261,7 @@ describe('customFetch', () => {
     // Nuxt's `keyTriggersExecute && (immediate || hadData || wasRunning)` rule.
     key.value = 'fallback:2'
     await keyWatch?.callback('fallback:2', 'fallback:1')
-    expect(asyncData.data.value).toEqual({ count: 3 })
+    await vi.waitFor(() => expect(asyncData.data.value).toEqual({ count: 3 }))
 
     watchedSource.value = 2
     await sourceWatch?.callback()
@@ -1306,7 +1324,44 @@ describe('customFetch', () => {
     key.value = 'fallback:watch:2'
     await keyWatch?.callback('fallback:watch:2', 'fallback:watch:1')
 
-    expect(asyncData.data.value).toEqual({ count: 2 })
+    await vi.waitFor(() => expect(asyncData.data.value).toEqual({ count: 2 }))
+  })
+
+  it('uses prerendered data on the initial fallback load and fetches on watched changes', async () => {
+    const watched = ref(1)
+    const requestFetch = vi.fn().mockResolvedValue('fresh')
+    __setRequestFetchImpl(requestFetch)
+    __setNuxtApp({
+      isHydrating: false,
+      _asyncData: {},
+      static: { data: { items: 'prerendered' } }
+    })
+    const state = await new CustomFetch({ showLogs: false }).get<string>('/items', { key: 'items' }, { watch: [watched] })
+
+    expect(state.data.value).toBe('prerendered')
+    expect(requestFetch).not.toHaveBeenCalled()
+
+    watched.value++
+    const watcher = __getNuxtMockState().watchCalls.find(call => Array.isArray(call.source))
+    await watcher?.callback()
+
+    expect(requestFetch).toHaveBeenCalledTimes(1)
+    expect(state.data.value).toBe('fresh')
+  })
+
+  it('fetches a fallback key that has no own cache entry', async () => {
+    const requestFetch = vi.fn().mockResolvedValue('from request')
+    __setRequestFetchImpl(requestFetch)
+    __setNuxtApp({
+      isHydrating: false,
+      _asyncData: {}
+    })
+
+    const state = await new CustomFetch({ showLogs: false }).get<string>('/items', { key: 'toString' })
+
+    expect(requestFetch).toHaveBeenCalledTimes(1)
+    expect(state.data.value).toBe('from request')
+    expect(Object.hasOwn(__getNuxtMockState().nuxtApp.payload.data, 'toString')).toBe(true)
   })
 
   it('reuses the pending fallback request when dedupe is defer', async () => {
@@ -1696,6 +1751,196 @@ describe('customFetch', () => {
     expect(asyncData.error.value).toBeUndefined()
     expect(asyncData.status.value).toBe('idle')
     expect(asyncData.pending.value).toBe(false)
+  })
+
+  it.each(['clear', 'cache', 'abort', 'timeout'] as const)('prevents a late fallback result after %s, including async transform', async (action) => {
+    let finishTransform: ((value: string) => void) | undefined
+    let cached: string | undefined
+    const transform = vi.fn(() => new Promise<string>((resolve) => {
+      finishTransform = resolve
+    }))
+    const requestFetch = vi.fn().mockResolvedValue('response')
+    __setRequestFetchImpl(requestFetch)
+    __setNuxtApp({
+      isHydrating: false,
+      _asyncData: {}
+    })
+    const asyncData = await new CustomFetch({ showLogs: false }).get<string>('/late-transform', { key: 'late-transform' }, {
+      immediate: false,
+      transform,
+      getCachedData: () => cached
+    })
+    const controller = new AbortController()
+    const execution = asyncData.execute({
+      signal: controller.signal,
+      timeout: action === 'timeout' ? 50 : undefined
+    })
+    await vi.waitFor(() => expect(transform).toHaveBeenCalledOnce())
+    if (action === 'clear') {
+      asyncData.clear()
+    }
+    else if (action === 'cache') {
+      cached = 'cached'
+      await asyncData.execute()
+    }
+    else if (action === 'abort') {
+      controller.abort()
+    }
+    // The execute promise must settle even while transform ignores cancellation.
+    await execution
+    finishTransform?.('late')
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(asyncData.data.value).toBe(action === 'cache' ? 'cached' : undefined)
+    expect(asyncData.status.value).toBe(action === 'cache' ? 'success' : action === 'timeout' ? 'error' : 'idle')
+    expect(asyncData.pending.value).toBe(false)
+    expect(__getNuxtMockState().nuxtApp.payload.data['late-transform']).not.toBe('late')
+  })
+
+  it('settles and ignores a fetch that ignores its abort signal, and removes the external listener', async () => {
+    let finishFetch: ((value: string) => void) | undefined
+    __setRequestFetchImpl(() => new Promise<string>((resolve) => {
+      finishFetch = resolve
+    }))
+    __setNuxtApp({
+      isHydrating: false,
+      _asyncData: {}
+    })
+    const asyncData = await new CustomFetch({ showLogs: false }).get<string>('/ignores-abort', {}, { immediate: false })
+    const controller = new AbortController()
+    const removeListener = vi.spyOn(controller.signal, 'removeEventListener')
+    const execution = asyncData.execute({ signal: controller.signal })
+    controller.abort()
+    await execution
+    finishFetch?.('late')
+    await Promise.resolve()
+
+    expect(asyncData.data.value).toBeUndefined()
+    expect(asyncData.status.value).toBe('idle')
+    expect(removeListener).toHaveBeenCalledWith('abort', expect.any(Function))
+  })
+
+  it.each(['clear', 'replace', 'abort'] as const)('skips transform when an obsolete fetch resolves after %s', async (action) => {
+    let finishFetch: ((value: string) => void) | undefined
+    const requestFetch = vi.fn()
+      .mockImplementationOnce(() => new Promise<string>((resolve) => {
+        finishFetch = resolve
+      }))
+      .mockResolvedValue('current')
+    const transform = vi.fn((value: string) => value.toUpperCase())
+    __setRequestFetchImpl(requestFetch)
+    __setNuxtApp({
+      isHydrating: false,
+      _asyncData: {}
+    })
+    const asyncData = await new CustomFetch({ showLogs: false }).get<string>('/obsolete-fetch', {}, {
+      immediate: false,
+      transform
+    })
+    const controller = new AbortController()
+    const execution = asyncData.execute({ signal: controller.signal })
+    if (action === 'clear') {
+      asyncData.clear()
+    }
+    else if (action === 'replace') {
+      await asyncData.execute()
+    }
+    else {
+      controller.abort()
+    }
+    await execution
+    transform.mockClear()
+    finishFetch?.('obsolete')
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(transform).not.toHaveBeenCalled()
+    expect(asyncData.data.value).toBe(action === 'replace' ? 'CURRENT' : undefined)
+  })
+
+  it('keeps a manual fallback refresh alive when another caller initially reads static cache', async () => {
+    const { fetch, resolve } = mockPendingClientFetch({ 'shared-refresh': 'cached' })
+    __setPendingWhenIdle(true)
+    try {
+      const ajax = new CustomFetch({ showLogs: false })
+      const first = await ajax.get<string>('/hello', { key: 'shared-refresh' }, { immediate: false })
+      const refreshing = first.refresh()
+      const second = await ajax.get<string>('/hello', { key: 'shared-refresh' })
+
+      expect(second.data.value).toBe('cached')
+      expect(fetch.mock.calls[0]?.[1].signal.aborted).toBe(false)
+      expect(first.pending.value).toBe(true)
+      expect(second.pending.value).toBe(true)
+      resolve('fresh')
+      await refreshing
+      expect(first.data.value).toBe('fresh')
+      expect(second.data.value).toBe('fresh')
+      expect(first.pending.value).toBe(false)
+      expect(second.pending.value).toBe(false)
+    }
+    finally {
+      __setPendingWhenIdle(false)
+    }
+  })
+
+  it('settles a cancelled refresh when disabled synchronously before the enabled watcher runs', async () => {
+    const { fetch, resolve } = mockPendingClientFetch()
+    const enabled = ref(true)
+    const data = await new CustomFetch({ showLogs: false }).get<string>('/hello', {}, {
+      immediate: false,
+      enabled
+    })
+    const refreshing = data.refresh()
+    enabled.value = false
+    await data.execute()
+    await refreshing
+
+    expect(fetch.mock.calls[0]?.[1].signal.aborted).toBe(true)
+    expect(data.status.value).toBe('idle')
+    expect(data.pending.value).toBe(false)
+    resolve('late')
+    await setImmediate()
+    expect(data.data.value).toBeUndefined()
+  })
+
+  it('preserves an active refresh when a later getCachedData callback throws', async () => {
+    const { fetch, resolve } = mockPendingClientFetch()
+    const getCachedData = vi.fn<() => string | undefined>().mockReturnValue(undefined)
+    const data = await new CustomFetch({ showLogs: false }).get<string>('/hello', {}, {
+      immediate: false,
+      getCachedData
+    })
+    const refreshing = data.refresh()
+    getCachedData.mockImplementationOnce(() => {
+      throw new Error('cache callback failed')
+    })
+    await expect(data.execute()).rejects.toThrow('cache callback failed')
+    expect(fetch.mock.calls[0]?.[1].signal.aborted).toBe(false)
+    expect(data.status.value).toBe('pending')
+    resolve('fresh')
+    await refreshing
+    expect(data.data.value).toBe('fresh')
+    expect(data.status.value).toBe('success')
+    expect(data.pending.value).toBe(false)
+  })
+
+  it('restores external signal listener count after a request completes normally', async () => {
+    __setNuxtApp({
+      isHydrating: false,
+      _asyncData: {}
+    })
+    __setRequestFetchImpl(async () => 'fresh')
+    const external = new AbortController()
+    const baselineListener = () => {}
+    external.signal.addEventListener('abort', baselineListener)
+    const baselineCount = getEventListeners(external.signal, 'abort').length
+    const data = await new CustomFetch({ showLogs: false }).get<string>('/hello', {}, { immediate: false })
+    await data.execute({ signal: external.signal })
+
+    expect(data.data.value).toBe('fresh')
+    expect(getEventListeners(external.signal, 'abort')).toHaveLength(baselineCount)
+    external.signal.removeEventListener('abort', baselineListener)
   })
 
   it('propagates useAsyncData errors instead of falling back', async () => {

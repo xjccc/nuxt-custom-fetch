@@ -72,6 +72,11 @@ type ResolvedRequestFetchOptions = ResolvedCustomFetchOptions & {
 const _cachedController = new Map<string, AbortController>()
 const _cachedClientAsyncData = new Map<string, ClientAsyncDataEntry>()
 const MAX_UNSCOPED_CLIENT_ASYNC_DATA_ENTRIES = 50
+const DISABLED_ABORT_MESSAGE = 'AsyncData request cancelled by `enabled: false`'
+
+function readOwnEntry<T> (entries: Record<string, T> | undefined, key: string) {
+  return entries && Object.hasOwn(entries, key) ? entries[key] : undefined
+}
 
 function createAbortController () {
   return typeof AbortController !== 'undefined' ? new AbortController() : undefined
@@ -87,12 +92,14 @@ function linkAbortSignal (signal: AbortSignal | undefined, controller: AbortCont
     return
   }
 
-  signal.addEventListener('abort', () => controller.abort((signal as AbortSignal).reason), { once: true })
+  const onAbort = () => controller.abort(signal.reason)
+  signal.addEventListener('abort', onAbort, { once: true })
+  return () => signal.removeEventListener('abort', onAbort)
 }
 
 /**
  * Merge the provided signals (plus an optional timeout) into a single signal,
- * mirroring Nuxt's `mergeAbortSignals`. Always backed by a dedicated controller
+ * mirroring Nuxt's `mergeAbortSignals`. Uses native signal composition when available
  * so the request still receives an abort signal when the async-data context does
  * not provide one, and returns `undefined` when `AbortController` is unavailable.
  */
@@ -107,6 +114,10 @@ function createMergedSignal (signals: Array<AbortSignal | undefined>, timeout?: 
 
   if (typeof timeout === 'number' && timeout >= 0 && typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function') {
     sources.push(AbortSignal.timeout(timeout))
+  }
+
+  if (typeof AbortSignal !== 'undefined' && typeof AbortSignal.any === 'function') {
+    return AbortSignal.any(sources)
   }
 
   for (const signal of sources) {
@@ -414,19 +425,30 @@ export class CustomFetch {
         }
 
         if (nuxtApp.isHydrating) {
-          return nuxtApp.payload?.data?.[key.value] as CustomFetchData<DataT, PickKeys, DefaultT> | undefined
+          return readOwnEntry(nuxtApp.payload?.data, key.value) as CustomFetchData<DataT, PickKeys, DefaultT> | undefined
         }
 
-        if (cause !== 'refresh:manual' && cause !== 'refresh:hook') {
-          return nuxtApp.static?.data?.[key.value] as CustomFetchData<DataT, PickKeys, DefaultT> | undefined
+        if (cause === 'initial') {
+          return readOwnEntry(nuxtApp.static?.data, key.value) as CustomFetchData<DataT, PickKeys, DefaultT> | undefined
         }
 
         return undefined
       }
 
       const writePayloadData = (value: CustomFetchData<DataT, PickKeys, DefaultT>) => {
-        if (fallbackOptions.serialize !== false && nuxtApp.payload?.data) {
-          nuxtApp.payload.data[key.value] = value
+        const payload = nuxtApp.payload?.data
+        if (fallbackOptions.serialize !== false && payload) {
+          if (key.value === '__proto__' && !Object.hasOwn(payload, key.value)) {
+            Object.defineProperty(payload, key.value, {
+              configurable: true,
+              enumerable: true,
+              writable: true,
+              value
+            })
+          }
+          else {
+            payload[key.value] = value
+          }
         }
       }
 
@@ -454,6 +476,24 @@ export class CustomFetch {
         }
       }
 
+      const abortActiveRequest = (reason?: DOMException) => {
+        requestId++
+        activeController?.abort(reason)
+        activeRequest = undefined
+        activeController = undefined
+        _cachedController.delete(key.value)
+      }
+
+      const cancelPendingRequest = (message: string) => {
+        if (activeRequest) {
+          abortActiveRequest(new DOMException(message, 'AbortError'))
+          if (statusRef.value === 'pending') {
+            statusRef.value = 'idle'
+          }
+          setPending(false)
+        }
+      }
+
       const stopWatchers = () => {
         stopKeyWatch?.()
         stopKeyWatch = undefined
@@ -472,8 +512,7 @@ export class CustomFetch {
         pending: pendingRef,
         clear: () => {
           stopWatchers()
-          activeController?.abort()
-          _cachedController.delete(key.value)
+          abortActiveRequest()
           if (_cachedClientAsyncData.get(key.value) === asyncData) {
             _cachedClientAsyncData.delete(key.value)
           }
@@ -490,35 +529,37 @@ export class CustomFetch {
         execute: async (executeOptions?: AsyncDataExecuteOptions) => {
           const cause = executeOptions?.cause
           const dedupe = executeOptions?.dedupe ?? options.dedupe ?? 'cancel'
-          if (activeRequest) {
-            if (dedupe === 'defer') {
-              return activeRequest
-            }
-
-            activeController?.abort()
+          if (activeRequest && dedupe === 'defer') {
+            return activeRequest
           }
 
           if (granularCachedData || cause === 'initial' || nuxtApp.isHydrating) {
             const cachedData = resolveCachedData(cause)
             if (cachedData !== undefined) {
+              // An initial read can serve cached data while another caller refreshes it.
+              if (cause !== 'initial' && activeRequest) {
+                abortActiveRequest(new DOMException('AsyncData request cancelled by cache hit', 'AbortError'))
+              }
               writePayloadData(cachedData)
               hasData = true
               asyncData.data.value = cachedData
               asyncData.error.value = asyncDataDefaults.errorValue
               asyncData.status.value = 'success'
-              setPending(false)
+              setPending(activeRequest !== undefined)
               return
             }
           }
 
           if (toValue(options.enabled) === false) {
+            cancelPendingRequest(DISABLED_ABORT_MESSAGE)
             return
           }
 
           const currentRequestId = ++requestId
+          activeController?.abort()
           const controller = createAbortController()
           activeController = controller
-          linkAbortSignal(executeOptions?.signal, controller)
+          const removeExternalAbortListener = linkAbortSignal(executeOptions?.signal, controller)
 
           if (controller) {
             _cachedController.set(key.value, controller)
@@ -539,36 +580,36 @@ export class CustomFetch {
             run = () => Promise.resolve(middleware(next, { signal: signal as AbortSignal }))
           }
 
-          let request: Promise<ResT>
           let removeAbortListener: (() => void) | undefined
-          try {
-            request = fallbackOptions.middleware?.length
-              ? new Promise<ResT>((resolve, reject) => {
-                  const onAbort = () => reject(signal?.reason ?? new DOMException('Aborted', 'AbortError'))
-                  if (signal?.aborted) {
-                    onAbort()
-                    return
-                  }
-                  signal?.addEventListener('abort', onAbort, { once: true })
-                  removeAbortListener = () => signal?.removeEventListener('abort', onAbort)
-                  Promise.resolve(run()).then(resolve, reject)
-                })
-              : run()
-          }
-          catch (error) {
-            request = Promise.reject(error)
-          }
+          const request = new Promise<ResT | DataT>((resolve, reject) => {
+            const onAbort = () => reject(signal?.reason ?? new DOMException('Aborted', 'AbortError'))
+            if (signal?.aborted) {
+              onAbort()
+              return
+            }
+            signal?.addEventListener('abort', onAbort, { once: true })
+            removeAbortListener = () => signal?.removeEventListener('abort', onAbort)
+            const result = run()
+            if (options.transform) {
+              result.then((value) => {
+                if (currentRequestId !== requestId || signal?.aborted) {
+                  return value
+                }
+                return options.transform!(value)
+              }).then(resolve, reject)
+            }
+            else {
+              result.then(resolve, reject)
+            }
+          })
 
           activeRequest = request
-            .then(async (result) => {
-              if (currentRequestId !== requestId) {
+            .then((result) => {
+              if (currentRequestId !== requestId || signal?.aborted) {
                 return
               }
 
-              let data = result as unknown as DataT
-              if (options.transform) {
-                data = await options.transform(result)
-              }
+              const data = result as unknown as DataT
 
               let finalData = data as PickFrom<DataT, PickKeys>
               if (options.pick) {
@@ -594,6 +635,7 @@ export class CustomFetch {
             })
             .finally(() => {
               removeAbortListener?.()
+              removeExternalAbortListener?.()
               if (currentRequestId !== requestId) {
                 return
               }
@@ -611,25 +653,6 @@ export class CustomFetch {
 
           await activeRequest
         }
-      }
-
-      // Like Nuxt: abort the in-flight request and settle the state right away (on unmount or `enabled: false`).
-      const cancelActiveRequest = (reason: string) => {
-        if (!activeRequest) {
-          return
-        }
-
-        requestId++
-        activeController?.abort(new DOMException(reason, 'AbortError'))
-        activeRequest = undefined
-        activeController = undefined
-        _cachedController.delete(key.value)
-
-        if (asyncData.status.value === 'pending') {
-          asyncData.status.value = 'idle'
-        }
-
-        setPending(false)
       }
 
       _cachedClientAsyncData.set(key.value, asyncData as ClientAsyncDataEntry)
@@ -686,7 +709,7 @@ export class CustomFetch {
       if (isRef(options.enabled) || typeof options.enabled === 'function') {
         stopEnabledWatch = watch(() => toValue(options.enabled), (isEnabled) => {
           if (!isEnabled) {
-            cancelActiveRequest('AsyncData request cancelled by `enabled: false`')
+            cancelPendingRequest(DISABLED_ABORT_MESSAGE)
           }
         })
       }
@@ -698,7 +721,7 @@ export class CustomFetch {
       if (hasScope) {
         onScopeDispose(() => {
           stopWatchers()
-          cancelActiveRequest('AsyncData request cancelled by unmount')
+          cancelPendingRequest('AsyncData request cancelled by unmount')
         })
       }
 
@@ -709,7 +732,7 @@ export class CustomFetch {
       return asyncData.execute({ cause: 'initial' }).then(() => asyncData) as CustomFetchReturnValue<DataT, PickKeys, DefaultT, NuxtErrorDataT>
     }
 
-    const sharedAsyncData = nuxtApp._asyncData?.[key.value]
+    const sharedAsyncData = readOwnEntry(nuxtApp._asyncData, key.value)
     const cachedClientAsyncData = _cachedClientAsyncData.get(key.value)
     const instance = getCurrentInstance()
 
