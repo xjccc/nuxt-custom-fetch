@@ -1,5 +1,11 @@
 # nuxt-custom-fetch
 
+## v4.7.0
+
+[compare changes](https://github.com/xjccc/nuxt-custom-fetch/compare/v4.6.1...v4.7.0)
+
+本次发布将模块版本号与 Nuxt 4.7 对齐。运行时代码与 v4.6.1 相同，支持的 Nuxt 版本范围仍为 `^4.5.0`。
+
 ## v4.6.1
 
 [compare changes](https://github.com/xjccc/nuxt-custom-fetch/compare/v4.6.0...v4.6.1)
