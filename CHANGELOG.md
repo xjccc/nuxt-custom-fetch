@@ -1,5 +1,17 @@
 # nuxt-custom-fetch
 
+## v4.6.1
+
+[compare changes](https://github.com/xjccc/nuxt-custom-fetch/compare/v4.6.0...v4.6.1)
+
+### 🩹 Fixes
+
+- **main:** 对齐 Nuxt 4.7 的请求缓存与取消行为 ([b06ce07](https://github.com/xjccc/nuxt-custom-fetch/commit/b06ce07))
+
+### ❤️ Contributors
+
+- Xjccc ([@xjccc](https://github.com/xjccc))
+
 ## v4.6.0
 
 [compare changes](https://github.com/xjccc/nuxt-custom-fetch/compare/v4.5.0...v4.6.0)
